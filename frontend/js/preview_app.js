@@ -1,4 +1,4 @@
-/* Демо-версия «Испытания» — работает без сервера, данные в localStorage.
+/* Демо-версия «Экстренка» — работает без сервера, данные в localStorage.
    Это витрина для показа: та же логика и интерфейс, но без Python, БД и нейросети. */
 
 const STORE_KEY = 'ispytaniya_preview_v1';
@@ -122,40 +122,58 @@ function checkAnswer(question, value) {
 /* ============================ каркас страницы ============================ */
 
 function navBar(user) {
-  const links = user.role === 'teacher'
-    ? [['#/', 'Главная'], ['#/tests', 'Испытания'], ['#/results', 'Результаты'], ['#/users', 'Пользователи'], ['#/logs', 'Логи']]
-    : [['#/', 'Испытания'], ['#/attempts', 'Мои попытки']];
+  const isTeacher = user.role === 'teacher';
+  const links = isTeacher
+    ? [['#/', 'Главная'], ['#/tests', 'Испытания'], ['#/results', 'Результаты'], ['#/users', 'Пользователи'], ['#/logs', 'Логи'], ['#/instruction', 'Инструкция по ЭМП']]
+    : [['#/', 'Доступные испытания'], ['#/training', 'Обучение'], ['#/attempts', 'Мои попытки'], ['#/instruction', 'Инструкция по ЭМП']];
+  const current = window.location.hash || '#/';
+  const isActive = (href) => (href === '#/'
+    ? (current === '#/' || current.startsWith('#/run/'))
+    : current.startsWith(href.replace('#/', '#/')));
   return `
     <header class="topbar">
-      <a class="brand" href="#/">Испытания<span class="dot">.</span></a>
-      <nav class="nav">
-        ${links.map(([href, label]) => `<a href="${href}">${label}</a>`).join('')}
+      <a class="brand" href="#/">Экстренка<span class="dot">.</span></a>
+      <button class="nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="mainNav" onclick="toggleNav()">
+        <span class="nav-toggle-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+        Меню
+      </button>
+      <nav class="nav" id="mainNav">
+        ${links.map(([href, label]) => `<a href="${href}" class="${isActive(href) ? 'active' : ''}">${label}</a>`).join('')}
       </nav>
       <div class="userbox">
         <span class="role-badge ${user.role}">${user.role === 'teacher' ? 'преподаватель' : 'учащийся'}</span>
-        <a class="username" href="#/account" title="Аккаунт">${esc(user.fullName)}</a>
+        <a class="username ${current === '#/account' ? 'active-user' : ''}" href="#/account" title="Аккаунт">${esc(user.fullName)}</a>
         <button class="btn ghost small" onclick="logout()">Выйти</button>
       </div>
     </header>`;
 }
 
+function toggleNav() {
+  const nav = document.getElementById('mainNav');
+  const toggle = document.getElementById('navToggle');
+  if (!nav || !toggle) return;
+  const isOpen = nav.classList.toggle('open');
+  toggle.classList.toggle('is-open', isOpen);
+  toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
 function shell(user, content) {
   return `${navBar(user)}<main class="container">${content}</main>
     <footer class="footer">
-      <span>Демо-прототип · данные хранятся в браузере · без сервера
-        · <a href="#" onclick="resetDemo();return false">сбросить демо</a></span>
+      <a href="#" onclick="resetDemo();return false">сбросить демо-данные</a>
     </footer>`;
 }
 
 function plainShell(content) {
-  return `<div class="auth-wrap">${content}</div>
-    <footer class="footer"><span>Демо-прототип · данные в браузере</span></footer>`;
+  return `<div class="auth-wrap">${content}</div>`;
 }
 
 /* ============================ маршрутизация ============================ */
 
 const ROUTES = [
   [/^#\/$/, viewHome],
+  [/^#\/instruction$/, viewInstruction],
+  [/^#\/training$/, viewTraining],
   [/^#\/login$/, viewLogin],
   [/^#\/register$/, viewRegister],
   [/^#\/account$/, viewAccount],
@@ -204,7 +222,7 @@ function viewLogin() {
   return plainShell(`
     <div class="auth-card">
       <h1>Вход в систему</h1>
-      <p class="sub">Испытания: обучение и тестирование</p>
+      <p class="sub">Экстренка: обучение и тестирование</p>
       <div id="loginError" class="alert error hidden"></div>
       <div class="field">
         <label for="email">Почта</label>
@@ -697,11 +715,13 @@ function questionBlock(question, index, test, attempt) {
   return `
     <div class="question" data-qid="${question.id}">
       <div class="q-head">
-        <div>
-          <div class="q-index">Вопрос ${index + 1} из ${test.questions.length} · ${question.points} б.</div>
-          <div style="font-size:16px">${esc(question.text)}</div>
+        <div class="q-main">
+          <div class="q-meta">
+            <span class="q-index">Вопрос ${index + 1} из ${test.questions.length} · ${question.points} б.</span>
+            <span class="tag ${saved ? 'info' : ''}" data-status>${saved ? 'сохранён' : 'не отвечен'}</span>
+          </div>
+          <div class="q-text">${esc(question.text)}</div>
         </div>
-        <span class="tag ${saved ? 'info' : ''}" data-status>${saved ? 'сохранён' : 'не отвечен'}</span>
       </div>
       ${body}
       ${feedback}
@@ -1051,6 +1071,26 @@ function viewLogs(user) {
           <td class="small muted">${esc(l.detail)}</td>
         </tr>`;
       }).join('')}</tbody></table>` : '<p class="muted">Логов пока нет.</p>'}
+    </div>`);
+}
+
+function viewInstruction(user) {
+  return shell(user, `
+    <div class="panel-head"><h1>Инструкция по ЭМП</h1></div>
+    <div class="panel">
+      <p class="muted">В рабочей версии здесь открывается полная инструкция по выполнению экстренной помощи
+        со схемами и ссылкой на PDF. В демо-прототипе страница оставлена заглушкой.</p>
+      <a class="btn ghost" href="#/">На главную</a>
+    </div>`);
+}
+
+function viewTraining(user) {
+  return shell(user, `
+    <div class="panel-head"><h1>Обучение · тренировочный режим</h1></div>
+    <div class="panel">
+      <p class="muted">Тренировочный режим доступен в рабочей версии: запуск камеры, пробное прохождение
+        без сохранения результата. В демо-прототипе — заглушка.</p>
+      <a class="btn ghost" href="#/">На главную</a>
     </div>`);
 }
 

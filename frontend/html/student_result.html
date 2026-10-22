@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Результат · Испытания{% endblock %}
+{% block title %}Результат · Экстренка{% endblock %}
 {% block content %}
 {% set answers = {} %}
 {% for a in attempt.answers %}{% set _ = answers.update({a.question_id: a}) %}{% endfor %}

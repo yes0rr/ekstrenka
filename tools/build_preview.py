@@ -18,7 +18,7 @@ HTML = """<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Испытания — демо (без сервера)</title>
+<title>Экстренка — демо (без сервера)</title>
 <style>
 {css}
 </style>

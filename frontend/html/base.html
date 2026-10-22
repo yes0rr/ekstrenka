@@ -3,30 +3,40 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Испытания{% endblock %}</title>
+  <title>{% block title %}Экстренка{% endblock %}</title>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 {% if user %}
+{% set path = request.url.path %}
+{% set is_student = user.role != 'teacher' %}
 <header class="topbar">
-  <a class="brand" href="/">Испытания<span class="dot">.</span></a>
-  <nav class="nav">
-    {% if user.role == 'teacher' %}
-      <a href="/teacher/tests">Испытания</a>
-      <a href="/teacher/results">Результаты</a>
-      <a href="/teacher/users">Пользователи</a>
-      <a href="/teacher/logs">Логи</a>
-      <a href="/instruction/emergency-help">Инструкция по ЭМП</a>
+  <a class="brand" href="/">Экстренка<span class="dot">.</span></a>
+
+  <button class="nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="mainNav">
+    <span class="nav-toggle-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+    Меню
+  </button>
+
+  <nav class="nav" id="mainNav">
+    {% if is_student %}
+      <a href="/" class="{{ 'active' if path == '/' or path.startswith('/student/tests') else '' }}">Доступные испытания</a>
+      <a href="/training" class="{{ 'active' if path.startswith('/training') else '' }}">Обучение</a>
+      <a href="/student/attempts" class="{{ 'active' if path.startswith('/student/attempts') else '' }}">Мои попытки</a>
+      <a href="/instruction/emergency-help" class="{{ 'active' if path.startswith('/instruction') else '' }}">Инструкция по ЭМП</a>
     {% else %}
-      <a href="/">Доступные испытания</a>
-      <a href="/training">Обучение</a>
-      <a href="/student/attempts">Мои попытки</a>
-      <a href="/instruction/emergency-help">Инструкция по ЭМП</a>
+      <a href="/" class="{{ 'active' if path == '/' else '' }}">Главная</a>
+      <a href="/teacher/tests" class="{{ 'active' if path.startswith('/teacher/tests') else '' }}">Испытания</a>
+      <a href="/teacher/results" class="{{ 'active' if path.startswith('/teacher/results') else '' }}">Результаты</a>
+      <a href="/teacher/users" class="{{ 'active' if path.startswith('/teacher/users') else '' }}">Пользователи</a>
+      <a href="/teacher/logs" class="{{ 'active' if path.startswith('/teacher/logs') else '' }}">Логи</a>
+      <a href="/instruction/emergency-help" class="{{ 'active' if path.startswith('/instruction') else '' }}">Инструкция по ЭМП</a>
     {% endif %}
   </nav>
+
   <div class="userbox">
     <span class="role-badge {{ user.role }}">{{ 'преподаватель' if user.role == 'teacher' else 'учащийся' }}</span>
-    <a class="username" href="/account" title="Аккаунт">{{ user.full_name }}</a>
+    <a class="username" href="/account" title="Аккаунт" class="{{ 'active-user' if path == '/account' else '' }}">{{ user.full_name }}</a>
     <form method="post" action="/logout"><button class="btn ghost small">Выйти</button></form>
   </div>
 </header>
@@ -36,9 +46,7 @@
   {% block content %}{% endblock %}
 </main>
 
-<footer class="footer">
-  <span>Испытания · FastAPI + SQLAlchemy · нейропроверка: заглушка</span>
-</footer>
+<script src="/static/js/nav.js"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

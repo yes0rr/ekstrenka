@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Испытания — демо (без сервера)</title>
+<title>Экстренка — демо (без сервера)</title>
 <style>
 /* Дизайн-система: тёмная, спокойная, без внешних зависимостей */
 :root {
@@ -48,6 +48,14 @@ p { margin: 0 0 12px; }
 .nav { display: flex; gap: 18px; flex: 1; flex-wrap: wrap; }
 .nav a { color: var(--muted); font-size: 14px; }
 .nav a:hover { color: var(--text); text-decoration: none; }
+.nav a.active {
+  color: var(--text); font-weight: 600; position: relative;
+}
+.nav a.active::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -14px;
+  height: 2px; border-radius: 2px; background: var(--accent);
+}
+.nav-toggle { display: none; }
 .userbox { display: flex; align-items: center; gap: 10px; }
 .username { font-size: 14px; color: var(--text); }
 .role-badge {
@@ -136,10 +144,17 @@ tbody tr:hover { background: rgba(255,255,255,.02); }
 
 /* прохождение испытания */
 .run-shell { display: grid; gap: 16px; grid-template-columns: 1fr 320px; align-items: start; }
-@media (max-width: 860px) { .run-shell { grid-template-columns: 1fr; } }
 .question { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 14px; }
 .question .q-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .q-index { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.q-main { min-width: 0; }
+.q-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.q-text { font-size: 16px; line-height: 1.45; word-break: break-word; }
+.question [data-status] {
+  flex: 0 0 auto; width: max-content; max-width: 100%;
+  height: auto; min-height: 0; padding: 3px 9px;
+  border-radius: 8px; font-size: 11.5px; line-height: 1.35; white-space: nowrap;
+}
 .option { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; cursor: pointer; background: #0f151d; }
 .option:hover { border-color: #38485a; }
 .option input { margin-top: 3px; accent-color: var(--accent); }
@@ -212,12 +227,159 @@ tbody tr:hover { background: rgba(255,255,255,.02); }
   transition: border-color .2s ease, box-shadow .2s ease;
 }
 
+/* ==========================================================================
+   МОБИЛЬНАЯ АДАПТАЦИЯ
+   Брейкпоинты: 1024px — планшет, 760px — телефон, 420px — узкий телефон
+   ========================================================================== */
+
+/* --- двухколоночные раскладки (вместо инлайновых grid-template-columns) --- */
+.split-edit { grid-template-columns: 1fr 360px; align-items: start; }
+.split-two { grid-template-columns: 1fr 1fr; align-items: start; }
+.split-dash { grid-template-columns: 1.15fr .85fr; }
+
+@media (max-width: 1024px) {
+  .split-edit { grid-template-columns: 1fr 320px; }
+  .split-dash { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 900px) {
+  .split-edit, .split-two, .split-dash { grid-template-columns: 1fr; }
+  .run-shell { grid-template-columns: 1fr; }
+  .run-shell aside { order: -1; }          /* на телефоне камера и прогресс — сверху */
+}
+
+/* --- планшет --- */
+@media (max-width: 760px) {
+  .container { width: 100%; margin: 18px auto; padding: 0 12px; }
+  h1 { font-size: 22px; }
+  h2 { font-size: 17px; }
+
+  /* шапка: логотип | Меню | пользователь; меню раскрывается по кнопке */
+  .topbar {
+    padding: 10px 12px; gap: 10px; flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 30;
+  }
+  .brand { font-size: 17px; }
+
+  .nav-toggle {
+    display: inline-flex; align-items: center; gap: 8px;
+    order: 2; margin-left: auto;
+    padding: 8px 14px; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--panel-2);
+    color: var(--text); font: inherit; font-size: 14px; font-weight: 500;
+  }
+  .nav-toggle:active { background: rgba(79,140,255,.12); }
+  .nav-toggle.is-open { border-color: var(--accent); color: var(--accent); }
+  .nav-toggle-bars { display: inline-flex; flex-direction: column; gap: 3px; }
+  .nav-toggle-bars i { display: block; width: 14px; height: 2px; border-radius: 2px; background: currentColor; }
+
+  .nav {
+    display: none;
+    order: 3; width: 100%; flex-direction: column; gap: 4px;
+    margin-top: 4px; padding: 8px;
+    border: 1px solid var(--border); border-radius: 12px; background: var(--panel);
+  }
+  .nav.open { display: flex; }
+  .nav a {
+    display: block; padding: 11px 12px; border-radius: 8px;
+    border: 1px solid transparent; font-size: 15px; color: var(--muted);
+  }
+  .nav a:active { background: rgba(79,140,255,.1); }
+  .nav a.active {
+    color: var(--text); font-weight: 600;
+    background: rgba(79,140,255,.12); border-color: rgba(79,140,255,.35);
+  }
+  .nav a.active::after { display: none; }   /* подчёркивание не нужно в списке */
+
+  .userbox { order: 1; }
+  .userbox .role-badge { display: none; }
+  .username {
+    max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 14px; color: var(--text);
+  }
+  .username.active-user { color: var(--accent); }
+
+  /* панели и отступы */
+  .panel { padding: 14px; border-radius: 10px; }
+  .panel-head { gap: 10px; margin-bottom: 12px; }
+  .card { padding: 14px; }
+
+  /* статистика: 2 в ряд вместо 4 */
+  .grid.stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat { padding: 12px; }
+  .stat .value { font-size: 22px; }
+
+  /* кнопки — крупнее под палец */
+  .btn { padding: 11px 16px; font-size: 15px; }
+  .btn.small { padding: 8px 12px; font-size: 13px; }
+  .btn-row { gap: 8px; }
+  .btn-row .btn { flex: 1 1 auto; }
+
+  /* поля ввода: 16px, иначе iOS зумит страницу при фокусе */
+  input[type=text], input[type=email], input[type=password], input[type=number],
+  select, textarea { font-size: 16px; padding: 12px; }
+  .field-row { grid-template-columns: 1fr; gap: 0; }
+
+  /* вход/регистрация */
+  .auth-wrap { padding: 14px; align-items: start; }
+  .auth-card { padding: 20px 16px; border-radius: 14px; margin-top: 10px; }
+  .auth-card h1 { font-size: 20px; }
+  .demo-row { padding: 12px; }
+  .demo-text b { font-size: 13px; word-break: break-all; }
+  .demo-go { display: none; }              /* на телефоне вся карточка — кнопка */
+
+  /* прохождение испытания */
+  .question { padding: 14px; }
+  .q-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .option { padding: 12px; }
+  .option input { width: 18px; height: 18px; }
+  .media-box { aspect-ratio: 16 / 10; }
+  .run-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .run-actions .btn { flex: 1 1 auto; }
+
+  /* таблицы -> карточки */
+  .responsive-table { border: 0; }
+  .responsive-table thead { display: none; }
+  .responsive-table tbody, .responsive-table tr, .responsive-table td { display: block; width: 100%; }
+  .responsive-table tr {
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--panel-2); padding: 10px 12px; margin-bottom: 10px;
+  }
+  .responsive-table tr:hover { background: var(--panel-2); }
+  .responsive-table td {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+    border: 0; padding: 5px 0; text-align: right;
+  }
+  .responsive-table td::before {
+    content: attr(data-label);
+    flex: 0 0 auto; color: var(--muted); font-size: 12px;
+    text-transform: uppercase; letter-spacing: .04em; text-align: left; padding-top: 2px;
+  }
+  .responsive-table td[data-label=""]::before { content: ""; }
+  .responsive-table td .btn-row { flex: 1; justify-content: flex-end; flex-wrap: wrap; }
+  .responsive-table td input[type=number] { width: 90px !important; }
+  .responsive-table td input[type=text] { width: 100% !important; }
+
+  /* логи: длинные строки не рвут вёрстку */
+  .mono { word-break: break-word; }
+  .footer { padding: 18px 12px; font-size: 11px; }
+}
+
+/* --- узкий телефон --- */
+@media (max-width: 420px) {
+  .grid.stats { grid-template-columns: 1fr; }
+  .btn { width: 100%; }
+  .btn-row .btn { width: 100%; }
+  .tag { font-size: 10px; }
+  .timeline .row { font-size: 13px; }
+}
+
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-/* Демо-версия «Испытания» — работает без сервера, данные в localStorage.
+/* Демо-версия «Экстренка» — работает без сервера, данные в localStorage.
    Это витрина для показа: та же логика и интерфейс, но без Python, БД и нейросети. */
 
 const STORE_KEY = 'ispytaniya_preview_v1';
@@ -341,40 +503,58 @@ function checkAnswer(question, value) {
 /* ============================ каркас страницы ============================ */
 
 function navBar(user) {
-  const links = user.role === 'teacher'
-    ? [['#/', 'Главная'], ['#/tests', 'Испытания'], ['#/results', 'Результаты'], ['#/users', 'Пользователи'], ['#/logs', 'Логи']]
-    : [['#/', 'Испытания'], ['#/attempts', 'Мои попытки']];
+  const isTeacher = user.role === 'teacher';
+  const links = isTeacher
+    ? [['#/', 'Главная'], ['#/tests', 'Испытания'], ['#/results', 'Результаты'], ['#/users', 'Пользователи'], ['#/logs', 'Логи'], ['#/instruction', 'Инструкция по ЭМП']]
+    : [['#/', 'Доступные испытания'], ['#/training', 'Обучение'], ['#/attempts', 'Мои попытки'], ['#/instruction', 'Инструкция по ЭМП']];
+  const current = window.location.hash || '#/';
+  const isActive = (href) => (href === '#/'
+    ? (current === '#/' || current.startsWith('#/run/'))
+    : current.startsWith(href.replace('#/', '#/')));
   return `
     <header class="topbar">
-      <a class="brand" href="#/">Испытания<span class="dot">.</span></a>
-      <nav class="nav">
-        ${links.map(([href, label]) => `<a href="${href}">${label}</a>`).join('')}
+      <a class="brand" href="#/">Экстренка<span class="dot">.</span></a>
+      <button class="nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="mainNav" onclick="toggleNav()">
+        <span class="nav-toggle-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+        Меню
+      </button>
+      <nav class="nav" id="mainNav">
+        ${links.map(([href, label]) => `<a href="${href}" class="${isActive(href) ? 'active' : ''}">${label}</a>`).join('')}
       </nav>
       <div class="userbox">
         <span class="role-badge ${user.role}">${user.role === 'teacher' ? 'преподаватель' : 'учащийся'}</span>
-        <a class="username" href="#/account" title="Аккаунт">${esc(user.fullName)}</a>
+        <a class="username ${current === '#/account' ? 'active-user' : ''}" href="#/account" title="Аккаунт">${esc(user.fullName)}</a>
         <button class="btn ghost small" onclick="logout()">Выйти</button>
       </div>
     </header>`;
 }
 
+function toggleNav() {
+  const nav = document.getElementById('mainNav');
+  const toggle = document.getElementById('navToggle');
+  if (!nav || !toggle) return;
+  const isOpen = nav.classList.toggle('open');
+  toggle.classList.toggle('is-open', isOpen);
+  toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
 function shell(user, content) {
   return `${navBar(user)}<main class="container">${content}</main>
     <footer class="footer">
-      <span>Демо-прототип · данные хранятся в браузере · без сервера
-        · <a href="#" onclick="resetDemo();return false">сбросить демо</a></span>
+      <a href="#" onclick="resetDemo();return false">сбросить демо-данные</a>
     </footer>`;
 }
 
 function plainShell(content) {
-  return `<div class="auth-wrap">${content}</div>
-    <footer class="footer"><span>Демо-прототип · данные в браузере</span></footer>`;
+  return `<div class="auth-wrap">${content}</div>`;
 }
 
 /* ============================ маршрутизация ============================ */
 
 const ROUTES = [
   [/^#\/$/, viewHome],
+  [/^#\/instruction$/, viewInstruction],
+  [/^#\/training$/, viewTraining],
   [/^#\/login$/, viewLogin],
   [/^#\/register$/, viewRegister],
   [/^#\/account$/, viewAccount],
@@ -423,7 +603,7 @@ function viewLogin() {
   return plainShell(`
     <div class="auth-card">
       <h1>Вход в систему</h1>
-      <p class="sub">Испытания: обучение и тестирование</p>
+      <p class="sub">Экстренка: обучение и тестирование</p>
       <div id="loginError" class="alert error hidden"></div>
       <div class="field">
         <label for="email">Почта</label>
@@ -705,7 +885,7 @@ function viewTestEdit(user, id) {
         <button class="btn" onclick="togglePublish(${test.id})">${test.published ? 'Снять с публикации' : 'Опубликовать'}</button>
       </div>
     </div>
-    <div class="grid" style="grid-template-columns:1fr 360px;align-items:start">
+    <div class="grid split-edit">
       <section class="panel">
         <div class="panel-head"><h2 style="margin:0">Вопросы (${test.questions.length})</h2></div>
         ${test.questions.length ? test.questions.map((q, index) => `
@@ -916,11 +1096,13 @@ function questionBlock(question, index, test, attempt) {
   return `
     <div class="question" data-qid="${question.id}">
       <div class="q-head">
-        <div>
-          <div class="q-index">Вопрос ${index + 1} из ${test.questions.length} · ${question.points} б.</div>
-          <div style="font-size:16px">${esc(question.text)}</div>
+        <div class="q-main">
+          <div class="q-meta">
+            <span class="q-index">Вопрос ${index + 1} из ${test.questions.length} · ${question.points} б.</span>
+            <span class="tag ${saved ? 'info' : ''}" data-status>${saved ? 'сохранён' : 'не отвечен'}</span>
+          </div>
+          <div class="q-text">${esc(question.text)}</div>
         </div>
-        <span class="tag ${saved ? 'info' : ''}" data-status>${saved ? 'сохранён' : 'не отвечен'}</span>
       </div>
       ${body}
       ${feedback}
@@ -1273,12 +1455,32 @@ function viewLogs(user) {
     </div>`);
 }
 
+function viewInstruction(user) {
+  return shell(user, `
+    <div class="panel-head"><h1>Инструкция по ЭМП</h1></div>
+    <div class="panel">
+      <p class="muted">В рабочей версии здесь открывается полная инструкция по выполнению экстренной помощи
+        со схемами и ссылкой на PDF. В демо-прототипе страница оставлена заглушкой.</p>
+      <a class="btn ghost" href="#/">На главную</a>
+    </div>`);
+}
+
+function viewTraining(user) {
+  return shell(user, `
+    <div class="panel-head"><h1>Обучение · тренировочный режим</h1></div>
+    <div class="panel">
+      <p class="muted">Тренировочный режим доступен в рабочей версии: запуск камеры, пробное прохождение
+        без сохранения результата. В демо-прототипе — заглушка.</p>
+      <a class="btn ghost" href="#/">На главную</a>
+    </div>`);
+}
+
 function viewAccount(user) {
   return shell(user, `
     <div class="panel-head"><h1>Аккаунт</h1></div>
     <div id="accError" class="alert error hidden"></div>
     <div id="accOk" class="alert ok hidden"></div>
-    <div class="grid" style="grid-template-columns:1fr 1fr;align-items:start">
+    <div class="grid split-two">
       <section class="panel">
         <h2 style="margin-top:0">Профиль</h2>
         <div class="field"><label>Почта</label><input type="text" value="${esc(user.email)}" disabled></div>

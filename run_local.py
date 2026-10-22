@@ -78,7 +78,7 @@ def ensure_env() -> None:
     if ENV_EXAMPLE.exists():
         text = ENV_EXAMPLE.read_text(encoding="utf-8")
     else:
-        text = "APP_NAME=Испытания\nSECRET_KEY=change-me\n"
+        text = "APP_NAME=Экстренка\nSECRET_KEY=change-me\n"
     text = text.replace("замени-на-длинную-случайную-строку", secrets.token_hex(32))
     text = text.replace("SEED_DEMO=0", "SEED_DEMO=1")
     if "SECRET_KEY=" not in text:

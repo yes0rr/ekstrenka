@@ -27,11 +27,13 @@
       {% for q in test.questions %}
       <div class="question" data-qid="{{ q.id }}" data-kind="{{ q.kind }}" data-points="{{ q.points }}">
         <div class="q-head">
-          <div>
-            <div class="q-index">Вопрос {{ loop.index }} из {{ test.questions|length }} · {{ q.points }} б.</div>
-            <div style="font-size:16px">{{ q.text }}</div>
+          <div class="q-main">
+            <div class="q-meta">
+              <span class="q-index">Вопрос {{ loop.index }} из {{ test.questions|length }} · {{ q.points }} б.</span>
+              <span class="tag" data-status>не отвечен</span>
+            </div>
+            <div class="q-text">{{ q.text }}</div>
           </div>
-          <span class="tag" data-status>не отвечен</span>
         </div>
 
         {% set options = q.options|from_json %}

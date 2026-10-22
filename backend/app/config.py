@@ -43,7 +43,7 @@ def _database_url() -> str:
 
 
 class Settings:
-    app_name: str = os.getenv("APP_NAME", "Испытания")
+    app_name: str = os.getenv("APP_NAME", "Экстренка")
     secret_key: str = os.getenv("SECRET_KEY", "dev-secret-change-me-in-production")
     database_url: str = _database_url()
     host: str = os.getenv("HOST", "0.0.0.0")
