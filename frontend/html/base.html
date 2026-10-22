@@ -8,25 +8,64 @@
 </head>
 <body>
 {% if user %}
+{#-- пункты меню заданы один раз: шапка и мобильная панель рендерят их из одного списка --#}
+{% if user.role == 'teacher' %}
+  {% set nav_items = [
+    {'href': '/teacher/tests', 'label': 'Испытания'},
+    {'href': '/teacher/results', 'label': 'Результаты'},
+    {'href': '/teacher/users', 'label': 'Пользователи'},
+    {'href': '/teacher/logs', 'label': 'Логи'},
+    {'href': '/instruction/emergency-help', 'label': 'Инструкция по ЭМП'}
+  ] %}
+{% else %}
+  {% set nav_items = [
+    {'href': '/', 'label': 'Доступные испытания'},
+    {'href': '/training', 'label': 'Обучение'},
+    {'href': '/student/attempts', 'label': 'Мои попытки'},
+    {'href': '/instruction/emergency-help', 'label': 'Инструкция по ЭМП'}
+  ] %}
+{% endif %}
+{% macro nav_link(item) -%}
+  {%- set path = request.url.path -%}
+  {%- set active = path == item.href or (item.href != '/' and path.startswith(item.href ~ '/')) -%}
+  <a href="{{ item.href }}"{% if active %} class="active" aria-current="page"{% endif %}>{{ item.label }}</a>
+{%- endmacro %}
 <header class="topbar">
   <a class="brand" href="/">Испытания<span class="dot">.</span></a>
-  <nav class="nav">
-    {% if user.role == 'teacher' %}
-      <a href="/teacher/tests">Испытания</a>
-      <a href="/teacher/results">Результаты</a>
-      <a href="/teacher/users">Пользователи</a>
-      <a href="/teacher/logs">Логи</a>
-    {% else %}
-      <a href="/">Доступные испытания</a>
-      <a href="/student/attempts">Мои попытки</a>
-    {% endif %}
+  <nav class="nav" aria-label="Основное меню">
+    {% for item in nav_items %}{{ nav_link(item) }}{% endfor %}
   </nav>
   <div class="userbox">
     <span class="role-badge {{ user.role }}">{{ 'преподаватель' if user.role == 'teacher' else 'учащийся' }}</span>
     <a class="username" href="/account" title="Аккаунт">{{ user.full_name }}</a>
     <form method="post" action="/logout"><button class="btn ghost small">Выйти</button></form>
   </div>
+  <button class="mobile-menu-toggle" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="mobileMenu" data-mobile-menu-open>
+    <span aria-hidden="true">☰</span>
+  </button>
 </header>
+
+<div class="mobile-menu" id="mobileMenu" aria-hidden="true">
+  <div class="mobile-menu-backdrop" data-mobile-menu-close></div>
+  <div class="mobile-menu-panel" role="dialog" aria-modal="true" aria-label="Меню">
+    <div class="mobile-menu-head">
+      <span class="mobile-menu-title">Меню</span>
+      <button class="mobile-menu-close" type="button" aria-label="Закрыть меню" data-mobile-menu-close>
+        <span aria-hidden="true">✕</span>
+      </button>
+    </div>
+    <nav class="mobile-menu-nav" aria-label="Меню (мобильное)">
+      {% for item in nav_items %}{{ nav_link(item) }}{% endfor %}
+    </nav>
+    <div class="mobile-menu-user">
+      <div class="mobile-menu-user-row">
+        <span class="role-badge {{ user.role }}">{{ 'преподаватель' if user.role == 'teacher' else 'учащийся' }}</span>
+        <a class="username" href="/account" title="Аккаунт">{{ user.full_name }}</a>
+      </div>
+      <form method="post" action="/logout"><button class="btn ghost small">Выйти</button></form>
+    </div>
+  </div>
+</div>
 {% endif %}
 
 <main class="container">
@@ -36,6 +75,7 @@
 <footer class="footer">
   <span>Испытания · FastAPI + SQLAlchemy · нейропроверка: заглушка</span>
 </footer>
+<script src="/static/js/mobile_menu.js" defer></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
