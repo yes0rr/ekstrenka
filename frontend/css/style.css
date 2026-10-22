@@ -23,6 +23,23 @@ body {
   flex-direction: column;
 }
 a { color: var(--accent); text-decoration: none; }
+/* ссылка-источник: компактная плашка вместо длинного адреса */
+.source-link {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 100%;
+  padding: 7px 12px 7px 8px; border-radius: 10px;
+  border: 1px solid rgba(79,140,255,.35); background: rgba(79,140,255,.1);
+  color: var(--text); font-size: 14px; text-decoration: none;
+}
+.source-link:hover { text-decoration: none; border-color: var(--accent); }
+.source-icon {
+  flex: 0 0 auto; font-size: 10px; font-weight: 700; letter-spacing: .04em;
+  padding: 3px 6px; border-radius: 6px; background: var(--accent); color: #0d1117;
+}
+.source-text { min-width: 0; overflow-wrap: anywhere; }
+
+/* длинные адреса и слова переносятся, а не вылезают за рамку карточки */
+.container, .container a, .panel, .panel a, .card, .card a { overflow-wrap: anywhere; word-break: break-word; }
+pre, code { overflow-wrap: anywhere; }
 a:hover { text-decoration: underline; }
 h1, h2, h3 { line-height: 1.25; margin: 0 0 12px; }
 h1 { font-size: 26px; letter-spacing: -0.02em; }
@@ -247,12 +264,15 @@ tbody tr:hover { background: rgba(255,255,255,.02); }
   h1 { font-size: 22px; }
   h2 { font-size: 17px; }
 
-  /* шапка: логотип | Меню | пользователь; меню раскрывается по кнопке */
+  /* шапка в две ровные строки:
+       1) «Экстренка.» ————————————————— [☰ Меню]
+       2) пользователь ————————————————————— [Выйти]
+       3) (раскрытый список пунктов во всю ширину)                              */
   .topbar {
-    padding: 10px 12px; gap: 10px; flex-wrap: wrap;
-    position: sticky; top: 0; z-index: 30;
+    padding: 10px 14px; gap: 8px 10px; flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 30; align-items: center;
   }
-  .brand { font-size: 17px; }
+  .brand { order: 1; font-size: 18px; line-height: 1.2; }
 
   .nav-toggle {
     display: inline-flex; align-items: center; gap: 8px;
@@ -260,21 +280,38 @@ tbody tr:hover { background: rgba(255,255,255,.02); }
     padding: 8px 14px; border-radius: 10px; cursor: pointer;
     border: 1px solid var(--border); background: var(--panel-2);
     color: var(--text); font: inherit; font-size: 14px; font-weight: 500;
+    line-height: 1.2;
   }
   .nav-toggle:active { background: rgba(79,140,255,.12); }
   .nav-toggle.is-open { border-color: var(--accent); color: var(--accent); }
   .nav-toggle-bars { display: inline-flex; flex-direction: column; gap: 3px; }
   .nav-toggle-bars i { display: block; width: 14px; height: 2px; border-radius: 2px; background: currentColor; }
 
+  /* вторая строка: имя слева, кнопка «Выйти» справа */
+  .userbox {
+    order: 3; flex: 0 0 100%; width: 100%;
+    justify-content: space-between; gap: 10px;
+    padding-top: 8px; border-top: 1px solid rgba(38,49,61,.7);
+  }
+  .userbox .role-badge { display: none; }
+  .username {
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-size: 14px; line-height: 1.2; color: var(--text);
+  }
+  .username.active-user { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+  .userbox .btn { flex: 0 0 auto; }
+
+  /* третья строка: сам список, всегда во всю ширину шапки */
   .nav {
     display: none;
-    order: 3; width: 100%; flex-direction: column; gap: 4px;
-    margin-top: 4px; padding: 8px;
+    order: 4; flex: 0 0 100%; width: 100%;
+    flex-direction: column; gap: 2px; flex-wrap: nowrap;
+    margin: 0; padding: 6px;
     border: 1px solid var(--border); border-radius: 12px; background: var(--panel);
   }
   .nav.open { display: flex; }
   .nav a {
-    display: block; padding: 11px 12px; border-radius: 8px;
+    display: block; width: 100%; padding: 11px 12px; border-radius: 8px;
     border: 1px solid transparent; font-size: 15px; color: var(--muted);
   }
   .nav a:active { background: rgba(79,140,255,.1); }
@@ -283,14 +320,6 @@ tbody tr:hover { background: rgba(255,255,255,.02); }
     background: rgba(79,140,255,.12); border-color: rgba(79,140,255,.35);
   }
   .nav a.active::after { display: none; }   /* подчёркивание не нужно в списке */
-
-  .userbox { order: 1; }
-  .userbox .role-badge { display: none; }
-  .username {
-    max-width: 40vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    font-size: 14px; color: var(--text);
-  }
-  .username.active-user { color: var(--accent); }
 
   /* панели и отступы */
   .panel { padding: 14px; border-radius: 10px; }
@@ -362,6 +391,7 @@ tbody tr:hover { background: rgba(255,255,255,.02); }
 @media (max-width: 420px) {
   .grid.stats { grid-template-columns: 1fr; }
   .btn { width: 100%; }
+  .userbox .btn { width: auto; }   /* «Выйти» остаётся компактной */
   .btn-row .btn { width: 100%; }
   .tag { font-size: 10px; }
   .timeline .row { font-size: 13px; }
