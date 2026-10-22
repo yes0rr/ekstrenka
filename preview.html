@@ -163,55 +163,6 @@ tbody tr:hover { background: rgba(255,255,255,.02); }
 .timeline .row.done .n { background: rgba(110,231,183,.15); border-color: rgba(110,231,183,.4); color: var(--accent-2); }
 .timeline .row.current .n { background: rgba(79,140,255,.15); border-color: var(--accent); color: var(--accent); }
 
-/* ---------- карточки демо-доступов (вход/регистрация) ---------- */
-.auth-card { position: relative; }
-.auth-card::before {
-  content: "";
-  position: absolute; inset: 0 0 auto 0; height: 3px;
-  border-radius: 16px 16px 0 0;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2) 60%, transparent);
-  opacity: .9;
-}
-.demo-box {
-  margin-top: 20px; padding: 14px;
-  border: 1px dashed var(--border); border-radius: 12px;
-  background: rgba(79,140,255,.04);
-}
-.demo-title {
-  font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
-  color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
-}
-.demo-title::after { content: ""; flex: 1; height: 1px; background: var(--border); }
-.demo-row {
-  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
-  padding: 10px 12px; margin-bottom: 8px; cursor: pointer;
-  border: 1px solid var(--border); border-radius: 10px;
-  background: var(--panel-2); color: var(--text); font: inherit;
-  transition: border-color .15s ease, background .15s ease, transform .05s ease;
-}
-.demo-row:last-child { margin-bottom: 0; }
-.demo-row:hover { border-color: var(--accent); background: rgba(79,140,255,.08); }
-.demo-row:active { transform: translateY(1px); }
-.demo-badge {
-  flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%;
-  display: grid; place-items: center; font-weight: 700; font-size: 14px;
-  border: 1px solid var(--border);
-}
-.demo-badge.teacher { color: var(--accent-2); border-color: rgba(110,231,183,.45); background: rgba(110,231,183,.12); }
-.demo-badge.student { color: var(--accent); border-color: rgba(79,140,255,.45); background: rgba(79,140,255,.12); }
-.demo-text { flex: 1; min-width: 0; }
-.demo-text b { display: block; font-size: 13.5px; font-weight: 600; }
-.demo-text small { color: var(--muted); font-size: 12px; }
-.demo-go { color: var(--accent); font-size: 12.5px; white-space: nowrap; }
-.demo-note { color: var(--muted); font-size: 12px; margin-top: 10px; line-height: 1.45; }
-
-/* подсветка полей после подстановки демо-доступа */
-.filled-flash {
-  border-color: var(--accent-2) !important;
-  box-shadow: 0 0 0 3px rgba(110,231,183,.18) !important;
-  transition: border-color .2s ease, box-shadow .2s ease;
-}
-
 </style>
 </head>
 <body>
@@ -342,8 +293,8 @@ function checkAnswer(question, value) {
 
 function navBar(user) {
   const links = user.role === 'teacher'
-    ? [['#/', 'Главная'], ['#/tests', 'Испытания'], ['#/results', 'Результаты'], ['#/users', 'Пользователи'], ['#/logs', 'Логи']]
-    : [['#/', 'Испытания'], ['#/attempts', 'Мои попытки']];
+    ? [['#/', 'Главная'], ['#/tests', 'Испытания'], ['#/results', 'Результаты'], ['#/users', 'Пользователи'], ['#/logs', 'Логи'], ['#/instruction/emergency-help', 'Инструкция по ЭМП']]
+    : [['#/', 'Испытания'], ['#/training', 'Обучение'], ['#/attempts', 'Мои попытки'], ['#/instruction/emergency-help', 'Инструкция по ЭМП']];
   return `
     <header class="topbar">
       <a class="brand" href="#/">Испытания<span class="dot">.</span></a>
@@ -387,6 +338,8 @@ const ROUTES = [
   [/^#\/results$/, viewResults],
   [/^#\/users$/, viewUsers],
   [/^#\/logs$/, viewLogs],
+  [/^#\/instruction\/emergency-help$/, viewEmergencyHelp],
+  [/^#\/training$/, viewTraining],
 ];
 
 function router() {
@@ -435,31 +388,10 @@ function viewLogin() {
       </div>
       <button class="btn" style="width:100%" onclick="doLogin()">Войти</button>
       <div class="auth-foot">Нет аккаунта? <a href="#/register">Зарегистрироваться</a></div>
-      <div class="demo-box">
-        <div class="demo-title">демо-доступы</div>
-        <button type="button" class="demo-row" onclick="fillDemo('teacher')">
-          <span class="demo-badge teacher">П</span>
-          <span class="demo-text"><b>teacher@example.com</b><small>пароль teacher123 · проводящий испытание</small></span>
-          <span class="demo-go">подставить →</span>
-        </button>
-        <button type="button" class="demo-row" onclick="fillDemo('student')">
-          <span class="demo-badge student">У</span>
-          <span class="demo-text"><b>student@example.com</b><small>пароль student123 · учащийся</small></span>
-          <span class="demo-go">подставить →</span>
-        </button>
+      <div class="auth-foot small muted" style="margin-top:12px">
+        Демо-доступы: teacher@example.com / teacher123 · student@example.com / student123
       </div>
     </div>`);
-}
-
-function fillDemo(role) {
-  const accounts = {
-    teacher: { email: 'teacher@example.com', password: 'teacher123' },
-    student: { email: 'student@example.com', password: 'student123' },
-  };
-  const account = accounts[role];
-  if (!account) return;
-  document.getElementById('email').value = account.email;
-  document.getElementById('password').value = account.password;
 }
 
 function doLogin() {
@@ -1214,6 +1146,171 @@ function saveManual(attemptId) {
   saveDB();
   logAction('manual_result', `${score} б.`);
   router();
+}
+
+function viewTraining(user) {
+  if (!user) window.location.hash = '#/login';
+  return shell(user, `
+    <div class="panel-head">
+      <div>
+        <h1>Обучение</h1>
+        <p class="muted">Сейчас будет тренировочный режим.</p>
+      </div>
+      <a class="btn ghost" href="#/">На главную</a>
+    </div>
+    <div class="panel" style="max-width:720px">
+      <h2 style="margin-top:0">Тренировочный режим</h2>
+      <p>На этой странице можно перейти к тренировочному тестированию с проверкой камеры.</p>
+      <div class="alert info" style="margin-top:12px">
+        <strong>Внимание:</strong> при старте тестирования браузер запросит доступ к видеокамере.
+      </div>
+      <button class="btn" onclick="openStartTestModal()">Начать тренировочное тестирование</button>
+    </div>
+
+    <div id="startModal" class="modal hidden">
+      <div class="modal-backdrop" onclick="closeStartTestModal()"></div>
+      <div class="modal-dialog" style="max-width:520px">
+        <div class="modal-head">
+          <h2 style="margin:0">Запуск тестирования</h2>
+          <button class="btn ghost small" onclick="closeStartTestModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <p>Сейчас будет запущен тренировочный режим. После нажатия «Начать тестирование» сайт запросит доступ к видеокамере и начнёт вывод записи.</p>
+          <div class="alert info" style="margin-top:10px">Разрешите доступ к камере в окне браузера.</div>
+          <div class="media-box" style="margin-top:12px">
+            <div class="media-placeholder" id="trainMediaPlaceholder">Камера не подключена</div>
+            <video id="trainCam" autoplay playsinline muted class="hidden" style="width:100%;height:100%;object-fit:cover"></video>
+          </div>
+          <div id="trainCamStatus" class="muted small" style="margin-top:8px">Статус: ожидание</div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn ghost" onclick="closeStartTestModal()">Отмена</button>
+          <button class="btn" id="startTestBtn" onclick="startTrainingTest()">Начать тестирование</button>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+let trainStream = null;
+function openStartTestModal(){ const m=document.getElementById('startModal'); if(m) m.classList.remove('hidden'); }
+function closeStartTestModal(){ const m=document.getElementById('startModal'); if(m) m.classList.add('hidden'); stopTrainCamera(); }
+async function startTrainingTest(){
+  const statusEl=document.getElementById('trainCamStatus');
+  const btn=document.getElementById('startTestBtn');
+  if(statusEl) statusEl.textContent='Статус: запрос доступа к видеокамере...';
+  if(btn){btn.disabled=true;btn.textContent='Запуск...';}
+  try{
+    trainStream = await navigator.mediaDevices.getUserMedia({video:true,audio:false});
+    const video=document.getElementById('trainCam');
+    const ph=document.getElementById('trainMediaPlaceholder');
+    if(video){video.srcObject=trainStream;video.classList.remove('hidden');}
+    if(ph) ph.classList.add('hidden');
+    if(statusEl) statusEl.textContent='Статус: доступ к камере получен. Идёт вывод записи.';
+  }catch(e){
+    if(statusEl) statusEl.textContent='Статус: доступ к камере не получен. '+(e.message||e);
+    if(btn){btn.disabled=false;btn.textContent='Начать тестирование';}
+    alert('Не удалось получить доступ к видеокамере. Проверьте разрешения браузера.');
+  }
+}
+function stopTrainCamera(){
+  if(trainStream){trainStream.getTracks().forEach(t=>t.stop());trainStream=null;}
+  const video=document.getElementById('trainCam');
+  const ph=document.getElementById('trainMediaPlaceholder');
+  if(video){video.classList.add('hidden');video.srcObject=null;}
+  if(ph) ph.classList.remove('hidden');
+  const statusEl=document.getElementById('trainCamStatus');
+  const btn=document.getElementById('startTestBtn');
+  if(statusEl) statusEl.textContent='Статус: ожидание';
+  if(btn){btn.disabled=false;btn.textContent='Начать тестирование';}
+}
+
+function viewEmergencyHelp(user) {
+  if (!user) window.location.hash = '#/login';
+  return shell(user, `
+    <div class="panel" style="max-width:1100px;margin:0 auto">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <div>
+          <h1 style="margin:0 0 6px">Инструкция по выполнению действий при оказании экстренной медицинской помощи</h1>
+          <p class="muted" style="margin:0">Основано на «Паспорте экзаменационной станции «Экстренная медицинская помощь»» (ОСКЭ). Источник: <a href="https://fmza.ru/upload/medialibrary/fe7/pasport_pa_psa_emp_30.03.26_red.pdf" target="_blank" rel="noopener">fmza.ru/.../pasport_pa_psa_emp_30.03.26_red.pdf</a></p>
+        </div>
+        <a class="btn ghost" href="#/">На главную</a>
+      </div>
+
+      <div class="panel" style="background:rgba(79,140,255,.08);border-color:rgba(79,140,255,.35);margin-bottom:18px">
+        <h2 style="margin-top:0">Общие положения</h2>
+        <ul class="list">
+          <li><strong>Задача станции:</strong> обследование пациента с резким ухудшением состояния в условиях амбулаторно-поликлинической МО, использование укладки ЭМП и распознавание остановки кровообращения с применением при необходимости АНД.</li>
+          <li><strong>Время:</strong> общее — 10 минут, на станции — не менее 8,5 минут.</li>
+          <li><strong>Условия:</strong> пациент 45 лет (~60 кг, рост 165 см), есть периферический венозный катетер. Укладка ЭМП и АНД. Медбрат/медсестра — помощник.</li>
+        </ul>
+      </div>
+
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:18px">
+        <div class="panel">
+          <h2 style="margin-top:0">Тайминг</h2>
+          <table class="table"><thead><tr><th>Время</th><th>Команда</th><th>Действие</th></tr></thead>
+            <tbody>
+              <tr><td>0'</td><td>«Ознакомьтесь с заданием станции»</td><td>Ознакомление с брифингом</td></tr>
+              <tr><td>0,5'</td><td>«Войдите на станцию и озвучьте свой логин»</td><td>Начало работы</td></tr>
+              <tr><td>8,0'</td><td>«У Вас осталась одна минута»</td><td>Продолжение</td></tr>
+              <tr><td>9,0'</td><td>«Перейдите на следующую станцию»</td><td>Переход</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="panel">
+          <h2 style="margin-top:0">Сценарии</h2>
+          <ol class="list" style="margin:0;padding-left:18px">
+            <li>ОКС1, кардиогенный шок</li>
+            <li>ОКС2, отёк лёгких</li>
+            <li>Анафилактический шок</li>
+            <li>Желудочно-кишечное кровотечение</li>
+            <li>БОС на фоне бронхиальной астмы</li>
+            <li>ТЭЛА</li>
+            <li>Спонтанный пневмоторакс (обструктивный шок)</li>
+            <li>Гипогликемия</li>
+            <li>Гипергликемия</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:18px">
+        <h2 style="margin-top:0">Алгоритм ABCDE</h2>
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">
+          <div class="panel" style="background:var(--panel-2)"><h3 style="margin-top:0">Подготовка</h3><ol class="list" style="margin:0;padding-left:18px"><li>Оценить сознание (встряхнуть за плечи, вопрос)</li><li>Надеть перчатки, предложить надеть помощнику</li><li>Комментировать, давать указания помощнику</li></ol></div>
+          <div class="panel" style="background:var(--panel-2)"><h3 style="margin-top:0">A — проходимость</h3><ol class="list" style="margin:0;padding-left:18px"><li>Осмотр полости рта</li></ol></div>
+          <div class="panel" style="background:var(--panel-2)"><h3 style="margin-top:0">B — дыхание</h3><ol class="list" style="margin:0;padding-left:18px"><li>Пульсоксиметрия</li><li>Кислород при показаниях (1-3,5-7), не при отсутствии (4,8,9)</li><li>ЧДД ≥10 сек</li><li>Перкуссия/аускультация лёгких</li><li>Осмотр трахеи, вен шеи</li></ol></div>
+          <div class="panel" style="background:var(--panel-2)"><h3 style="margin-top:0">C — кровообращение</h3><ol class="list" style="margin:0;padding-left:18px"><li>Пульс (лучевой/сонный), симметричность, дефицит</li><li>АД</li><li>Аускультация сердца</li><li>Симптом белого пятна, цвет кожи</li><li>ЭКГ в 12 отведениях, интерпретация</li><li>Венозный доступ, забор анализов</li></ol></div>
+          <div class="panel" style="background:var(--panel-2)"><h3 style="margin-top:0">D — неврологический</h3><ol class="list" style="margin:0;padding-left:18px"><li>Фотореакция зрачков</li><li>Тонус мышц</li><li>Глюкоза крови с интерпретацией</li></ol></div>
+          <div class="panel" style="background:var(--panel-2)"><h3 style="margin-top:0">E — осмотр</h3><ol class="list" style="margin:0;padding-left:18px"><li>Пальпация живота, ректальное по показаниям</li><li>Диагноз, сообщение СМП/ОРИТ</li><li>Лечение по показаниям</li><li>Повторный ABCDE при необходимости</li></ol></div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:18px">
+        <h2 style="margin-top:0">При остановке кровообращения</h2>
+        <ol class="list">
+          <li><strong>Подтверждение:</strong> отсутствие сознания и дыхания (≥10 сек)</li>
+          <li><strong>КГК:</strong> начать в течение 20 сек после сообщения о прекращении экскурсий грудной клетки</li>
+          <li><strong>АНД:</strong> включить, наклеить электроды, не прерывать КГК. Не прикасаться при анализе ритма и разряде. Разряд по команде</li>
+          <li><strong>СЛР:</strong> КГК : ИВЛ 30:2, не оценивать жизнедеятельность сразу после дефибрилляции</li>
+          <li><strong>Динамика:</strong> по команде АНД прекратить для анализа ритма, не прикасаться, возобновить по команде</li>
+          <li><strong>Продолжительность:</strong> до приезда СМП/бригады ОРИТ</li>
+        </ol>
+      </div>
+
+      <div class="panel">
+        <h2 style="margin-top:0">Взаимодействие с помощником</h2>
+        <ul class="list">
+          <li>Чёткие полные указания, контроль выполнения</li>
+          <li>Перчатки — только по просьбе</li>
+          <li>Помощник уточняет «Как это надо делать?» при недостатке объяснений</li>
+          <li>После действия — сообщение о выполнении или результате</li>
+          <li>При ЭКГ/АНД до/во время ОК — использовать бумажную ЭКГ соответствующего сценария</li>
+        </ul>
+        <div style="margin-top:12px"><a class="btn" href="https://fmza.ru/upload/medialibrary/fe7/pasport_pa_psa_emp_30.03.26_red.pdf" target="_blank" rel="noopener">Открыть полный паспорт (PDF)</a></div>
+      </div>
+    </div>
+  `);
 }
 
 /* ============================ пользователи и логи ============================ */
