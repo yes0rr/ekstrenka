@@ -8,13 +8,13 @@
 
 <div class="panel">
   {% if logs %}
-  <table>
+  <table class="responsive-table">
     <thead><tr><th>Время</th><th>Действие</th><th>Пользователь</th><th>Объект</th><th>IP</th><th>Данные</th></tr></thead>
     <tbody>
     {% for l in logs %}
-      <tr>
+      
         <td class="mono small">{{ l.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</td>
-        <td><span class="tag">{{ l.action }}</span></td>
+        <td data-label="Время"><span class="tag">{{ l.action }}</span></td>
         <td class="small">{{ l.user.full_name if l.user else '—' }}</td>
         <td class="small mono">{{ l.entity or '' }}{% if l.entity_id %}#{{ l.entity_id }}{% endif %}</td>
         <td class="small mono">{{ l.ip or '—' }}</td>

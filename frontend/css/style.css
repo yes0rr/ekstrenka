@@ -129,7 +129,6 @@ tbody tr:hover { background: rgba(255,255,255,.02); }
 
 /* прохождение испытания */
 .run-shell { display: grid; gap: 16px; grid-template-columns: 1fr 320px; align-items: start; }
-@media (max-width: 860px) { .run-shell { grid-template-columns: 1fr; } }
 .question { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 14px; }
 .question .q-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .q-index { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
@@ -203,4 +202,128 @@ tbody tr:hover { background: rgba(255,255,255,.02); }
   border-color: var(--accent-2) !important;
   box-shadow: 0 0 0 3px rgba(110,231,183,.18) !important;
   transition: border-color .2s ease, box-shadow .2s ease;
+}
+
+/* ==========================================================================
+   МОБИЛЬНАЯ АДАПТАЦИЯ
+   Брейкпоинты: 1024px — планшет, 760px — телефон, 420px — узкий телефон
+   ========================================================================== */
+
+/* --- двухколоночные раскладки (вместо инлайновых grid-template-columns) --- */
+.split-edit { grid-template-columns: 1fr 360px; align-items: start; }
+.split-two { grid-template-columns: 1fr 1fr; align-items: start; }
+.split-dash { grid-template-columns: 1.15fr .85fr; }
+
+@media (max-width: 1024px) {
+  .split-edit { grid-template-columns: 1fr 320px; }
+  .split-dash { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 900px) {
+  .split-edit, .split-two, .split-dash { grid-template-columns: 1fr; }
+  .run-shell { grid-template-columns: 1fr; }
+  .run-shell aside { order: -1; }          /* на телефоне камера и прогресс — сверху */
+}
+
+/* --- планшет --- */
+@media (max-width: 760px) {
+  .container { width: 100%; margin: 18px auto; padding: 0 12px; }
+  h1 { font-size: 22px; }
+  h2 { font-size: 17px; }
+
+  /* шапка: логотип и пользователь в одну строку, меню — прокручиваемая полоса */
+  .topbar {
+    padding: 10px 12px; gap: 10px; flex-wrap: wrap;
+    position: sticky; top: 0;
+  }
+  .brand { font-size: 16px; }
+  .userbox { order: 1; width: 100%; justify-content: space-between; }
+  .username {
+    max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .nav {
+    order: 2; width: 100%; gap: 6px; flex-wrap: nowrap;
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px; scrollbar-width: none;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav a {
+    flex: 0 0 auto; padding: 7px 12px; border-radius: 999px;
+    border: 1px solid var(--border); background: var(--panel-2); font-size: 13px;
+  }
+
+  /* панели и отступы */
+  .panel { padding: 14px; border-radius: 10px; }
+  .panel-head { gap: 10px; margin-bottom: 12px; }
+  .card { padding: 14px; }
+
+  /* статистика: 2 в ряд вместо 4 */
+  .grid.stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat { padding: 12px; }
+  .stat .value { font-size: 22px; }
+
+  /* кнопки — крупнее под палец */
+  .btn { padding: 11px 16px; font-size: 15px; }
+  .btn.small { padding: 8px 12px; font-size: 13px; }
+  .btn-row { gap: 8px; }
+  .btn-row .btn { flex: 1 1 auto; }
+
+  /* поля ввода: 16px, иначе iOS зумит страницу при фокусе */
+  input[type=text], input[type=email], input[type=password], input[type=number],
+  select, textarea { font-size: 16px; padding: 12px; }
+  .field-row { grid-template-columns: 1fr; gap: 0; }
+
+  /* вход/регистрация */
+  .auth-wrap { padding: 14px; align-items: start; }
+  .auth-card { padding: 20px 16px; border-radius: 14px; margin-top: 10px; }
+  .auth-card h1 { font-size: 20px; }
+  .demo-row { padding: 12px; }
+  .demo-text b { font-size: 13px; word-break: break-all; }
+  .demo-go { display: none; }              /* на телефоне вся карточка — кнопка */
+
+  /* прохождение испытания */
+  .question { padding: 14px; }
+  .q-head { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .q-head .tag { align-self: flex-start; }
+  .option { padding: 12px; }
+  .option input { width: 18px; height: 18px; }
+  .media-box { aspect-ratio: 16 / 10; }
+  .run-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .run-actions .btn { flex: 1 1 auto; }
+
+  /* таблицы -> карточки */
+  .responsive-table { border: 0; }
+  .responsive-table thead { display: none; }
+  .responsive-table tbody, .responsive-table tr, .responsive-table td { display: block; width: 100%; }
+  .responsive-table tr {
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--panel-2); padding: 10px 12px; margin-bottom: 10px;
+  }
+  .responsive-table tr:hover { background: var(--panel-2); }
+  .responsive-table td {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+    border: 0; padding: 5px 0; text-align: right;
+  }
+  .responsive-table td::before {
+    content: attr(data-label);
+    flex: 0 0 auto; color: var(--muted); font-size: 12px;
+    text-transform: uppercase; letter-spacing: .04em; text-align: left; padding-top: 2px;
+  }
+  .responsive-table td[data-label=""]::before { content: ""; }
+  .responsive-table td .btn-row { flex: 1; justify-content: flex-end; flex-wrap: wrap; }
+  .responsive-table td input[type=number] { width: 90px !important; }
+  .responsive-table td input[type=text] { width: 100% !important; }
+
+  /* логи: длинные строки не рвут вёрстку */
+  .mono { word-break: break-word; }
+  .footer { padding: 18px 12px; font-size: 11px; }
+}
+
+/* --- узкий телефон --- */
+@media (max-width: 420px) {
+  .grid.stats { grid-template-columns: 1fr; }
+  .btn { width: 100%; }
+  .btn-row .btn { width: 100%; }
+  .tag { font-size: 10px; }
+  .timeline .row { font-size: 13px; }
 }

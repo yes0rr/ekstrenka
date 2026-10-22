@@ -486,7 +486,7 @@ function viewTestEdit(user, id) {
         <button class="btn" onclick="togglePublish(${test.id})">${test.published ? 'Снять с публикации' : 'Опубликовать'}</button>
       </div>
     </div>
-    <div class="grid" style="grid-template-columns:1fr 360px;align-items:start">
+    <div class="grid split-edit">
       <section class="panel">
         <div class="panel-head"><h2 style="margin:0">Вопросы (${test.questions.length})</h2></div>
         ${test.questions.length ? test.questions.map((q, index) => `
@@ -1059,7 +1059,7 @@ function viewAccount(user) {
     <div class="panel-head"><h1>Аккаунт</h1></div>
     <div id="accError" class="alert error hidden"></div>
     <div id="accOk" class="alert ok hidden"></div>
-    <div class="grid" style="grid-template-columns:1fr 1fr;align-items:start">
+    <div class="grid split-two">
       <section class="panel">
         <h2 style="margin-top:0">Профиль</h2>
         <div class="field"><label>Почта</label><input type="text" value="${esc(user.email)}" disabled></div>
