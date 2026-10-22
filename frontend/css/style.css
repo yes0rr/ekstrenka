@@ -155,3 +155,52 @@ tbody tr:hover { background: rgba(255,255,255,.02); }
 .timeline .row .n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; border: 1px solid var(--border); color: var(--muted); }
 .timeline .row.done .n { background: rgba(110,231,183,.15); border-color: rgba(110,231,183,.4); color: var(--accent-2); }
 .timeline .row.current .n { background: rgba(79,140,255,.15); border-color: var(--accent); color: var(--accent); }
+
+/* ---------- карточки демо-доступов (вход/регистрация) ---------- */
+.auth-card { position: relative; }
+.auth-card::before {
+  content: "";
+  position: absolute; inset: 0 0 auto 0; height: 3px;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2) 60%, transparent);
+  opacity: .9;
+}
+.demo-box {
+  margin-top: 20px; padding: 14px;
+  border: 1px dashed var(--border); border-radius: 12px;
+  background: rgba(79,140,255,.04);
+}
+.demo-title {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.demo-title::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+.demo-row {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  padding: 10px 12px; margin-bottom: 8px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--panel-2); color: var(--text); font: inherit;
+  transition: border-color .15s ease, background .15s ease, transform .05s ease;
+}
+.demo-row:last-child { margin-bottom: 0; }
+.demo-row:hover { border-color: var(--accent); background: rgba(79,140,255,.08); }
+.demo-row:active { transform: translateY(1px); }
+.demo-badge {
+  flex: 0 0 34px; width: 34px; height: 34px; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 700; font-size: 14px;
+  border: 1px solid var(--border);
+}
+.demo-badge.teacher { color: var(--accent-2); border-color: rgba(110,231,183,.45); background: rgba(110,231,183,.12); }
+.demo-badge.student { color: var(--accent); border-color: rgba(79,140,255,.45); background: rgba(79,140,255,.12); }
+.demo-text { flex: 1; min-width: 0; }
+.demo-text b { display: block; font-size: 13.5px; font-weight: 600; }
+.demo-text small { color: var(--muted); font-size: 12px; }
+.demo-go { color: var(--accent); font-size: 12.5px; white-space: nowrap; }
+.demo-note { color: var(--muted); font-size: 12px; margin-top: 10px; line-height: 1.45; }
+
+/* подсветка полей после подстановки демо-доступа */
+.filled-flash {
+  border-color: var(--accent-2) !important;
+  box-shadow: 0 0 0 3px rgba(110,231,183,.18) !important;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}

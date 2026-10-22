@@ -216,10 +216,31 @@ function viewLogin() {
       </div>
       <button class="btn" style="width:100%" onclick="doLogin()">Войти</button>
       <div class="auth-foot">Нет аккаунта? <a href="#/register">Зарегистрироваться</a></div>
-      <div class="auth-foot small muted" style="margin-top:12px">
-        Демо-доступы: teacher@example.com / teacher123 · student@example.com / student123
+      <div class="demo-box">
+        <div class="demo-title">демо-доступы</div>
+        <button type="button" class="demo-row" onclick="fillDemo('teacher')">
+          <span class="demo-badge teacher">П</span>
+          <span class="demo-text"><b>teacher@example.com</b><small>пароль teacher123 · проводящий испытание</small></span>
+          <span class="demo-go">подставить →</span>
+        </button>
+        <button type="button" class="demo-row" onclick="fillDemo('student')">
+          <span class="demo-badge student">У</span>
+          <span class="demo-text"><b>student@example.com</b><small>пароль student123 · учащийся</small></span>
+          <span class="demo-go">подставить →</span>
+        </button>
       </div>
     </div>`);
+}
+
+function fillDemo(role) {
+  const accounts = {
+    teacher: { email: 'teacher@example.com', password: 'teacher123' },
+    student: { email: 'student@example.com', password: 'student123' },
+  };
+  const account = accounts[role];
+  if (!account) return;
+  document.getElementById('email').value = account.email;
+  document.getElementById('password').value = account.password;
 }
 
 function doLogin() {
