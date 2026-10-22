@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Пользователи · Испытания{% endblock %}
+{% block content %}
+<div class="panel-head"><h1>Пользователи</h1><span class="muted small">роли и статусы</span></div>
+
+<div class="panel">
+  <table>
+    <thead><tr><th>ФИО</th><th>Почта</th><th>Роль</th><th>Статус</th><th>Группа</th><th>Регистрация</th><th>Действия</th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr>
+        <td>{{ u.full_name }}</td>
+        <td class="small mono">{{ u.email }}</td>
+        <td><span class="tag {{ 'teacher-street' if u.role == 'teacher' else 'info' }}">{{ 'преподаватель' if u.role == 'teacher' else 'учащийся' }}</span></td>
+        <td>{% if u.status == 'active' %}<span class="tag ok">активен</span>{% else %}<span class="tag bad">заблокирован</span>{% endif %}</td>
+        <td class="small">{{ u.group_name or '—' }}</td>
+        <td class="small mono">{{ u.created_at.strftime('%d.%m.%Y') }}</td>
+        <td>
+          <div class="btn-row">
+            <button class="btn ghost small" onclick="patchUser({{ u.id }}, {role: '{{ 'student' if u.role == 'teacher' else 'teacher' }}'})">
+              {{ 'Сделать учащимся' if u.role == 'teacher' else 'Сделать преподавателем' }}
+            </button>
+            <button class="btn ghost small" onclick="patchUser({{ u.id }}, {status: '{{ 'blocked' if u.status == 'active' else 'active' }}'})">
+              {{ 'Заблокировать' if u.status == 'active' else 'Разблокировать' }}
+            </button>
+          </div>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/api.js"></script>
+<script src="/static/js/users.js"></script>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Новое испытание · Испытания{% endblock %}
+{% block content %}
+<div class="panel-head"><h1>Новое испытание</h1><a class="btn ghost" href="/teacher/tests">Назад</a></div>
+
+<div class="panel" style="max-width:720px">
+  <form id="testForm">
+    <div class="field">
+      <label for="title">Название</label>
+      <input id="title" name="title" type="text" required minlength="3" placeholder="Например: Собеседование по теме «Датчики»">
+    </div>
+    <div class="field">
+      <label for="description">Описание</label>
+      <textarea id="description" name="description" placeholder="Что проверяем и в каком порядке"></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="mode">Режим</label>
+        <select id="mode" name="mode">
+          <option value="testing">Тестирование (без подсказок)</option>
+          <option value="training">Обучение (с разбором)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="subject_type">На ком проводится</label>
+        <select id="subject_type" name="subject_type">
+          <option value="human">Человек</option>
+          <option value="imitation">Имитация предметами</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="duration_min">Время, мин</label>
+        <input id="duration_min" name="duration_min" type="number" min="1" max="600" value="15">
+      </div>
+    </div>
+    <div class="field">
+      <label for="criteria">Критерии оценки (по ним будет работать нейропроверка)</label>
+      <textarea id="criteria" name="criteria" placeholder="Например: полнота ответа, корректность терминов, связность изложения"></textarea>
+    </div>
+    <div class="field-row">
+      <label class="checkbox"><input type="checkbox" id="use_camera" name="use_camera" checked> Камера</label>
+      <label class="checkbox"><input type="checkbox" id="use_mic" name="use_mic" checked> Микрофон</label>
+    </div>
+    <div id="err" class="alert error hidden"></div>
+    <button class="btn" type="submit">Создать и добавить вопросы</button>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/api.js"></script>
+<script src="/static/js/test_new.js"></script>
+{% endblock %}

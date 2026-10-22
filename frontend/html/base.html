@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Испытания{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+{% if user %}
+<header class="topbar">
+  <a class="brand" href="/">Испытания<span class="dot">.</span></a>
+  <nav class="nav">
+    {% if user.role == 'teacher' %}
+      <a href="/teacher/tests">Испытания</a>
+      <a href="/teacher/results">Результаты</a>
+      <a href="/teacher/users">Пользователи</a>
+      <a href="/teacher/logs">Логи</a>
+      <a href="/instruction/emergency-help">Инструкция по ЭМП</a>
+    {% else %}
+      <a href="/">Доступные испытания</a>
+      <a href="/training">Обучение</a>
+      <a href="/student/attempts">Мои попытки</a>
+      <a href="/instruction/emergency-help">Инструкция по ЭМП</a>
+    {% endif %}
+  </nav>
+  <div class="userbox">
+    <span class="role-badge {{ user.role }}">{{ 'преподаватель' if user.role == 'teacher' else 'учащийся' }}</span>
+    <a class="username" href="/account" title="Аккаунт">{{ user.full_name }}</a>
+    <form method="post" action="/logout"><button class="btn ghost small">Выйти</button></form>
+  </div>
+</header>
+{% endif %}
+
+<main class="container">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <span>Испытания · FastAPI + SQLAlchemy · нейропроверка: заглушка</span>
+</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Мои попытки · Испытания{% endblock %}
+{% block content %}
+<div class="panel-head"><h1>Мои попытки</h1><a class="btn ghost" href="/">К испытаниям</a></div>
+
+<div class="panel">
+  {% if attempts %}
+  <table>
+    <thead><tr><th>Испытание</th><th>Режим</th><th>Начало</th><th>Статус</th><th>Баллы</th><th>Нейро</th><th></th></tr></thead>
+    <tbody>
+    {% for a in attempts %}
+      <tr>
+        <td>{{ a.test.title }}</td>
+        <td><span class="tag {{ 'info' if a.mode == 'training' else '' }}">{{ 'обучение' if a.mode == 'training' else 'тестирование' }}</span></td>
+        <td class="small mono">{{ a.started_at.strftime('%d.%m.%Y %H:%M') }}</td>
+        <td>
+          {% if a.status == 'finished' %}<span class="tag ok">завершено</span>
+          {% elif a.status == 'in_progress' %}<span class="tag info">в процессе</span>
+          {% else %}<span class="tag bad">прервано</span>{% endif %}
+        </td>
+        <td class="mono">{{ a.final_score }} / {{ a.max_score }}</td>
+        <td><span class="tag warn">{{ a.neural_status }}</span></td>
+        <td class="right"><a class="btn ghost small" href="/student/attempts/{{ a.id }}">Подробнее</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Вы ещё не проходили испытания.</p>
+  {% endif %}
+</div>
+{% endblock %}

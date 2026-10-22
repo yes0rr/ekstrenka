@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Результат · Испытания{% endblock %}
+{% block content %}
+{% set answers = {} %}
+{% for a in attempt.answers %}{% set _ = answers.update({a.question_id: a}) %}{% endfor %}
+
+<div class="panel-head">
+  <div>
+    <h1>{{ attempt.test.title }}</h1>
+    <p class="muted">
+      {{ 'обучение' if attempt.mode == 'training' else 'тестирование' }} ·
+      {{ 'на человеке' if attempt.subject_type == 'human' else 'имитация предметами' }} ·
+      начато {{ attempt.started_at.strftime('%d.%m.%Y %H:%M') }}
+    </p>
+  </div>
+  <a class="btn ghost" href="/student/attempts">Все попытки</a>
+</div>
+
+<div class="grid stats" style="margin-bottom:18px">
+  <div class="stat"><div class="value">{{ attempt.final_score }}</div><div class="label">итоговый балл из {{ attempt.max_score }}</div></div>
+  <div class="stat"><div class="value">{{ attempt.score }}</div><div class="label">по алгоритму</div></div>
+  <div class="stat"><div class="value">{{ attempt.answers|length }}</div><div class="label">ответов</div></div>
+  <div class="stat"><div class="value">{{ attempt.media_seconds }}с</div><div class="label">медиа (камера/микрофон)</div></div>
+</div>
+
+{% if attempt.manual_score is not none %}
+<div class="alert ok"><strong>Оценка преподавателя:</strong> {{ attempt.manual_score }} б.
+  {% if attempt.teacher_comment %}— {{ attempt.teacher_comment }}{% endif %}</div>
+{% endif %}
+
+<div class="alert info">
+  <strong>Нейропроверка:</strong> {{ attempt.neural_status }}.
+  {% if attempt.neural_comment %}{{ attempt.neural_comment }}{% endif %}
+</div>
+
+<div class="panel">
+  <h2 style="margin-top:0">Разбор ответов</h2>
+  {% for q in attempt.test.questions %}
+    {% set a = answers.get(q.id) %}
+    <div class="question">
+      <div class="q-head">
+        <div>
+          <div class="q-index">Вопрос {{ loop.index }} · {{ q.points }} б.</div>
+          <div>{{ q.text }}</div>
+        </div>
+        {% if a and a.is_correct == true %}<span class="tag ok">верно</span>
+        {% elif a and a.is_correct == false %}<span class="tag bad">неверно</span>
+        {% elif a %}<span class="tag warn">на проверке</span>
+        {% else %}<span class="tag">нет ответа</span>{% endif %}
+      </div>
+      <div class="small">
+        <span class="muted">Ваш ответ:</span>
+        {% if a %}
+          {% set v = a.value|from_json(none) %}
+          {{ v if v is string else (v|join(', ') if v else '—') }}
+        {% else %}—{% endif %}
+      </div>
+      <div class="small muted" style="margin-top:4px">Начислено: {{ a.awarded_points if a else 0 }} б.</div>
+      {% if attempt.mode == 'training' %}
+        {% set correct = q.correct|from_json(none) %}
+        {% if correct %}
+        <div class="feedback neutral" style="margin-top:8px">
+          Правильный ответ: {{ correct if correct is string else correct|join(', ') }}
+          {% if q.hint %}<br>Подсказка: {{ q.hint }}{% endif %}
+        </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

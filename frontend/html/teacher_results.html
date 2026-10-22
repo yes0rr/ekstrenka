@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Результаты · Испытания{% endblock %}
+{% block content %}
+<div class="panel-head">
+  <h1>Результаты испытаний</h1>
+  <span class="muted small">Оценка = алгоритм (авто) + ручной ввод; нейропроверка — заглушка</span>
+</div>
+
+<div class="panel">
+  {% if attempts %}
+  <table>
+    <thead>
+      <tr><th>Учащийся</th><th>Испытание</th><th>Режим</th><th>Медиа</th><th>Авто</th><th>Итог</th><th>Нейро</th><th>Ручной ввод</th></tr>
+    </thead>
+    <tbody>
+    {% for a in attempts %}
+      <tr>
+        <td>
+          {{ a.student.full_name }}
+          <div class="muted small">{{ a.student.email }}</div>
+        </td>
+        <td>{{ a.test.title }}<div class="muted small">{{ a.started_at.strftime('%d.%m %H:%M') }}</div></td>
+        <td><span class="tag {{ 'info' if a.mode == 'training' else '' }}">{{ 'обучение' if a.mode == 'training' else 'тестирование' }}</span></td>
+        <td class="small">
+          {% if a.camera_used %}<span class="tag ok">🎥</span>{% endif %}
+          {% if a.mic_used %}<span class="tag ok">🎙</span>{% endif %}
+          <div class="muted mono">{{ a.media_seconds }}с</div>
+        </td>
+        <td class="mono">{{ a.score }} / {{ a.max_score }}</td>
+        <td class="mono"><strong>{{ a.final_score }}</strong></td>
+        <td><span class="tag warn">{{ a.neural_status }}</span></td>
+        <td>
+          <form onsubmit="return saveManual(event, {{ a.id }})" class="btn-row">
+            <input type="number" step="0.5" min="0" max="{{ a.max_score }}" name="score"
+                   value="{{ a.manual_score if a.manual_score is not none else '' }}"
+                   style="width:80px" placeholder="балл">
+            <input type="text" name="comment" value="{{ a.teacher_comment or '' }}" placeholder="комментарий" style="width:150px">
+            <button class="btn ghost small">Сохранить</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Пока никто не проходил ваши испытания.</p>
+  {% endif %}
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/api.js"></script>
+<script src="/static/js/results.js"></script>
+{% endblock %}

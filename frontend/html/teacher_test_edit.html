@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}{{ test.title }} · Испытания{% endblock %}
+{% block content %}
+{% set q_json = [] %}
+<div class="panel-head">
+  <div>
+    <h1>{{ test.title }}</h1>
+    <p class="muted">{{ test.description or 'Без описания' }} · {{ test.duration_min }} мин · максимум {{ test.max_score }} баллов</p>
+  </div>
+  <div class="btn-row">
+    <a class="btn ghost" href="/teacher/results?test_id={{ test.id }}">Результаты</a>
+    <button class="btn" id="publishBtn" data-published="{{ 'true' if test.is_published else 'false' }}">
+      {{ 'Снять с публикации' if test.is_published else 'Опубликовать' }}
+    </button>
+  </div>
+</div>
+
+<div class="grid" style="grid-template-columns: 1fr 360px; align-items:start">
+  <section class="panel">
+    <div class="panel-head"><h2 style="margin:0">Вопросы ({{ questions|length }})</h2></div>
+    <div id="questions">
+      {% for q in questions %}
+      <div class="question" data-id="{{ q.id }}">
+        <div class="q-head">
+          <div>
+            <div class="q-index">Вопрос {{ loop.index }} · {{ q.points }} б.</div>
+            <div>{{ q.text }}</div>
+          </div>
+          <button class="btn danger small" onclick="deleteQuestion({{ q.id }})">Удалить</button>
+        </div>
+        <div class="small muted">Тип: {{ q.kind }}
+          {% if q.options %}· варианты: {{ q.options|join(', ') }}{% endif %}
+          {% if q.correct %}· ответ: {{ q.correct if q.correct is string else q.correct|join(', ') }}{% endif %}
+        </div>
+      </div>
+      {% else %}
+      <p class="muted" id="noQuestions">Вопросов пока нет — добавьте первый справа.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2 style="margin-top:0">Добавить вопрос</h2>
+    <div class="field">
+      <label for="qtext">Текст вопроса</label>
+      <textarea id="qtext" placeholder="Что нужно ответить?"></textarea>
+    </div>
+    <div class="field">
+      <label for="qkind">Тип</label>
+      <select id="qkind">
+        <option value="single">Один вариант</option>
+        <option value="multiple">Несколько вариантов</option>
+        <option value="text">Текстовый ответ (сверка с эталоном)</option>
+        <option value="text_manual">Текстовый ответ (ручная проверка)</option>
+      </select>
+    </div>
+    <div class="field" id="optionsField">
+      <label for="qoptions">Варианты (по одному в строке)</label>
+      <textarea id="qoptions" placeholder="Вариант 1&#10;Вариант 2&#10;Вариант 3"></textarea>
+    </div>
+    <div class="field" id="correctField">
+      <label for="qcorrect">Правильный ответ (по одному в строке / для текста — эталон)</label>
+      <textarea id="qcorrect" placeholder="Правильный вариант"></textarea>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="qpoints">Баллы</label>
+        <input id="qpoints" type="number" min="0" max="100" step="0.5" value="1">
+      </div>
+    </div>
+    <div class="field">
+      <label for="qhint">Подсказка (только режим обучения)</label>
+      <input id="qhint" type="text" placeholder="Необязательно">
+    </div>
+    <div id="qerr" class="alert error hidden"></div>
+    <button class="btn" style="width:100%" onclick="addQuestion()">Добавить</button>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script id="edit-config" type="application/json">{"testId": {{ test.id }}}</script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/test_edit.js"></script>
+{% endblock %}
