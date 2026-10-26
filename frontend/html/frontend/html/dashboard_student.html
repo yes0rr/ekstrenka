@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Мои испытания · Экстренка{% endblock %}
+{% block content %}
+<div class="panel-head">
+  <div>
+    <h1>Доступные испытания</h1>
+    <p class="muted">Выберите испытание. Режим обучения показывает разбор, тестирование — нет.</p>
+  </div>
+  <a class="btn ghost" href="/student/attempts">Мои попытки</a>
+</div>
+
+<div class="grid stats" style="margin-bottom:18px">
+  <div class="stat"><div class="value">{{ tests|length }}</div><div class="label">доступно испытаний</div></div>
+  <div class="stat"><div class="value">{{ attempts|length }}</div><div class="label">моих попыток</div></div>
+  <div class="stat"><div class="value">{{ my_finished }}</div><div class="label">завершено</div></div>
+  <div class="stat"><div class="value">{{ user.group_name or '—' }}</div><div class="label">группа</div></div>
+</div>
+
+<div class="grid cards">
+  {% for t in tests %}
+  <div class="card">
+    <div class="title">{{ t.title }}</div>
+    <div class="meta">
+      <span class="tag {{ 'info' if t.mode == 'training' else '' }}">{{ 'обучение' if t.mode == 'training' else 'тестирование' }}</span>
+      <span class="tag">{{ 'на человеке' if t.subject_type == 'human' else 'имитация предметами' }}</span>
+    </div>
+    <p class="small muted">{{ t.description or 'Без описания' }}</p>
+    <div class="meta small">
+      <span>{{ t.questions|length }} вопр.</span>
+      <span>{{ t.duration_min }} мин</span>
+      <span>{{ t.max_score }} баллов</span>
+      {% if t.use_camera %}<span>🎥 камера</span>{% endif %}
+      {% if t.use_mic %}<span>🎙 микрофон</span>{% endif %}
+    </div>
+    <div class="btn-row" style="margin-top:auto">
+      <a class="btn" href="/student/tests/{{ t.id }}">Пройти</a>
+    </div>
+  </div>
+  {% else %}
+  <div class="panel"><p class="muted" style="margin:0">Пока нет опубликованных испытаний. Загляните позже.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

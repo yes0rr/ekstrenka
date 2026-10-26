@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Регистрация · Экстренка</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1>Регистрация</h1>
+    <p class="sub">Кем вы будете в системе?</p>
+    {% if error %}<div class="alert error">{{ error }}</div>{% endif %}
+    <form method="post" action="/register">
+      <div class="field">
+        <label for="full_name">ФИО</label>
+        <input id="full_name" type="text" name="full_name" required placeholder="Иванов Иван">
+      </div>
+      <div class="field">
+        <label for="email">Почта</label>
+        <input id="email" type="email" name="email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="password">Пароль (минимум 6 символов)</label>
+        <input id="password" type="password" name="password" required minlength="6" autocomplete="new-password">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="role">Роль</label>
+          <select id="role" name="role">
+            <option value="student">Учащийся</option>
+            {% if allow_teacher_signup %}
+            <option value="teacher">Проводящий испытание (преподаватель)</option>
+            {% endif %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="group_name">Группа (необязательно)</label>
+          <input id="group_name" type="text" name="group_name" placeholder="РИ-21">
+        </div>
+      </div>
+      <button class="btn" style="width:100%">Создать аккаунт</button>
+    </form>
+
+    <div class="demo-box">
+      <div class="demo-title">демо-доступы</div>
+      <a class="demo-row" href="/login?demo=teacher">
+        <span class="demo-badge teacher">П</span>
+        <span class="demo-text">
+          <b>teacher@example.com</b>
+          <small>пароль teacher123 · проводящий испытание</small>
+        </span>
+        <span class="demo-go">войти →</span>
+      </a>
+      <a class="demo-row" href="/login?demo=student">
+        <span class="demo-badge student">У</span>
+        <span class="demo-text">
+          <b>student@example.com</b>
+          <small>пароль student123 · учащийся</small>
+        </span>
+        <span class="demo-go">войти →</span>
+      </a>
+      <p class="demo-note">Уже созданы для демонстрации — можно войти, не регистрируясь.
+        Или создайте свой аккаунт формой выше.</p>
+    </div>
+    <div class="auth-foot">Уже есть аккаунт? <a href="/login">Войти</a></div>
+  </div>
+</div>
+<script src="/static/js/auth.js"></script>
+</body>
+</html>

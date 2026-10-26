@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Обучение · Экстренка{% endblock %}
+{% block content %}
+<div class="panel-head">
+  <div>
+    <h1>Обучение</h1>
+    <p class="muted">
+      Выберите испытание — откроется рабочее место с вопросами, камерой и разбором ответов.
+      В режиме обучения вердикт показывается сразу после ответа.
+    </p>
+  </div>
+  <a class="btn ghost" href="/student/attempts">Мои попытки</a>
+</div>
+
+{% if not tests %}
+<div class="panel">
+  <p class="muted" style="margin:0">
+    Пока нет опубликованных испытаний. Преподаватель должен создать испытание и нажать «Опубликовать».
+  </p>
+</div>
+{% else %}
+<div class="grid cards">
+  {% for t in tests %}
+  <div class="card">
+    <div class="title">{{ t.title }}</div>
+    <div class="meta">
+      <span class="tag {{ 'info' if t.mode == 'training' else '' }}">
+        {{ 'обучение' if t.mode == 'training' else 'тестирование' }}
+      </span>
+      <span class="tag">{{ 'на человеке' if t.subject_type == 'human' else 'имитация предметами' }}</span>
+      {% if open_attempts.get(t.id) %}<span class="tag warn">попытка открыта</span>{% endif %}
+    </div>
+    <p class="small muted">{{ t.description or 'Без описания' }}</p>
+    <div class="meta small">
+      <span>{{ t.questions|length }} вопр.</span>
+      <span>{{ t.duration_min }} мин</span>
+      <span>{{ t.max_score }} баллов</span>
+      {% if t.use_camera %}<span>камера</span>{% endif %}
+      {% if t.use_mic %}<span>микрофон</span>{% endif %}
+    </div>
+    <div class="btn-row" style="margin-top:auto">
+      <a class="btn" href="/student/tests/{{ t.id }}">
+        {{ 'Продолжить' if open_attempts.get(t.id) else 'Начать' }}
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="panel" style="margin-top:16px">
+  <h3 style="margin-top:0">Как проходит обучение</h3>
+  <ol class="muted small" style="margin:0;padding-left:18px;line-height:1.7">
+    <li>Откройте испытание — начнётся попытка, включится таймер.</li>
+    <li>Нажмите «Включить камеру» и разрешите доступ в браузере.</li>
+    <li>Под видео появится плашка «Анализ техники»: темп, глубина, положение рук.</li>
+    <li>Отвечайте на вопросы — в режиме обучения сразу виден разбор.</li>
+    <li>Нажмите «Завершить» — получите результат и разбор ошибок.</li>
+  </ol>
+  <p class="muted small" style="margin:12px 0 0">
+    Если станция занята другой попыткой, вы встанете в очередь — плашка покажет
+    вашу позицию и примерное время ожидания. Прохождение при этом не блокируется.
+  </p>
+</div>
+{% endif %}
+{% endblock %}

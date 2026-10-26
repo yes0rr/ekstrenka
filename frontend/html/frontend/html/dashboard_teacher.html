@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Кабинет преподавателя · Экстренка{% endblock %}
+{% block content %}
+<div class="panel-head">
+  <div>
+    <h1>Кабинет преподавателя</h1>
+    <p class="muted">Вы — проводящий испытание: создаёте задания, задаёте критерии, проверяете результаты.</p>
+  </div>
+  <div class="btn-row">
+    <a class="btn" href="/teacher/tests/new">+ Новое испытание</a>
+  </div>
+</div>
+
+<div class="grid stats" style="margin-bottom:18px">
+  <div class="stat"><div class="value">{{ tests|length }}</div><div class="label">моих испытаний</div></div>
+  <div class="stat"><div class="value">{{ published_count }}</div><div class="label">опубликовано</div></div>
+  <div class="stat"><div class="value">{{ finished_count }}</div><div class="label">завершённых попыток</div></div>
+  <div class="stat"><div class="value">{{ students_count }}</div><div class="label">учащихся в системе</div></div>
+</div>
+
+<div class="grid split-dash">
+  <section class="panel">
+    <div class="panel-head"><h2 style="margin:0">Последние испытания</h2><a class="small" href="/teacher/tests">все →</a></div>
+    {% if tests %}
+      <div class="grid" style="gap:10px">
+      {% for t in tests[:4] %}
+        <a class="card" href="/teacher/tests/{{ t.id }}" style="color:inherit">
+          <div class="title">{{ t.title }}</div>
+          <div class="meta">
+            <span>{{ t.questions|length }} вопр.</span>
+            <span>{{ 'обучение' if t.mode == 'training' else 'тестирование' }}</span>
+            <span>{{ 'на человеке' if t.subject_type == 'human' else 'имитация предметами' }}</span>
+            {% if t.is_published %}<span class="tag ok">опубликовано</span>{% else %}<span class="tag">черновик</span>{% endif %}
+          </div>
+        </a>
+      {% endfor %}
+      </div>
+    {% else %}
+      <p class="muted">Пока нет испытаний. Создайте первое — это займёт минуту.</p>
+      <a class="btn" href="/teacher/tests/new">Создать испытание</a>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2 style="margin:0">Последние попытки</h2><a class="small" href="/teacher/results">все →</a></div>
+    {% if attempts %}
+      <table>
+        <tbody>
+        {% for a in attempts %}
+          <tr>
+            <td>{{ a.student.full_name }}<div class="muted small">{{ a.test.title }}</div></td>
+            <td class="right">
+              <span class="tag {{ 'ok' if a.status == 'finished' else 'info' }}">
+                {% if a.status == 'finished' %}завершено{% elif a.status == 'in_progress' %}в процессе{% else %}прервано{% endif %}
+              </span>
+              <div class="muted small mono">{{ a.final_score }} / {{ a.max_score }}</div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="muted">Попыток ещё не было.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

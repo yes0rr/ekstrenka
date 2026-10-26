@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Логи · Экстренка{% endblock %}
+{% block content %}
+<div class="panel-head">
+  <h1>Журнал действий</h1>
+  <span class="muted small">последние {{ logs|length }} записей</span>
+</div>
+
+<div class="panel">
+  {% if logs %}
+  <table class="responsive-table">
+    <thead><tr><th>Время</th><th>Действие</th><th>Пользователь</th><th>Объект</th><th>IP</th><th>Данные</th></tr></thead>
+    <tbody>
+    {% for l in logs %}
+      
+        <td class="mono small">{{ l.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</td>
+        <td data-label="Время"><span class="tag">{{ l.action }}</span></td>
+        <td class="small">{{ l.user.full_name if l.user else '—' }}</td>
+        <td class="small mono">{{ l.entity or '' }}{% if l.entity_id %}#{{ l.entity_id }}{% endif %}</td>
+        <td class="small mono">{{ l.ip or '—' }}</td>
+        <td class="small mono muted">{{ l.payload or '' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Логов пока нет.</p>
+  {% endif %}
+</div>
+{% endblock %}

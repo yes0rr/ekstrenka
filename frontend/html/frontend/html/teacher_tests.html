@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Мои испытания · Экстренка{% endblock %}
+{% block content %}
+<div class="panel-head">
+  <h1>Мои испытания</h1>
+  <a class="btn" href="/teacher/tests/new">+ Новое испытание</a>
+</div>
+
+<div class="panel">
+  {% if tests %}
+  <table class="responsive-table">
+    <thead>
+      <tr><th>Название</th><th>Режим</th><th>Объект</th><th>Вопросы</th><th>Баллы</th><th>Статус</th><th></th></tr>
+    </thead>
+    <tbody>
+    {% for t in tests %}
+      
+        <td data-label="Название"><a href="/teacher/tests/{{ t.id }}">{{ t.title }}</a><div class="muted small">{{ t.created_at.strftime('%d.%m.%Y %H:%M') }}</div></td>
+        <td data-label="Режим"><span class="tag {{ 'info' if t.mode == 'training' else '' }}">{{ 'обучение' if t.mode == 'training' else 'тестирование' }}</span></td>
+        <td class="small">{{ 'человек' if t.subject_type == 'human' else 'имитация' }}</td>
+        <td class="mono">{{ t.questions|length }}</td>
+        <td class="mono">{{ t.max_score }}</td>
+        <td data-label="Объект">{% if t.is_published %}<span class="tag ok">опубликовано</span>{% else %}<span class="tag">черновик</span>{% endif %}</td>
+        <td class="right"><a class="btn ghost small" href="/teacher/tests/{{ t.id }}">Открыть</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Пусто. Создайте первое испытание.</p>
+  {% endif %}
+</div>
+{% endblock %}

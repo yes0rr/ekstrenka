@@ -1,0 +1,5 @@
+# Видеоанализ (MediaPipe Pose на сервере) — ставится только если VISION_ENABLED=1
+# Проверено: mediapipe 1.1.1, Python 3.12 / 3.13, 2 vCPU — 18 мс на кадр 640x480
+mediapipe==1.1.1
+opencv-python-headless==4.12.0.88
+numpy==2.2.6

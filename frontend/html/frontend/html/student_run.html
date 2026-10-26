@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ test.title }} · Прохождение{% endblock %}
+{% block content %}
+<div class="panel-head">
+  <div>
+    <h1>{{ test.title }}</h1>
+    <p class="muted">
+      {{ 'Режим обучения — с разбором ответов' if test.mode == 'training' else 'Режим тестирования — без подсказок' }}
+      · {{ 'на человеке' if test.subject_type == 'human' else 'имитация предметами' }}
+      · {{ test.questions|length }} вопр. · {{ test.max_score }} баллов
+    </p>
+  </div>
+  <div class="btn-row">
+    <span class="tag info" id="timerTag">00:00</span>
+    <button class="btn ghost" onclick="abortAttempt()">Прервать</button>
+    <button class="btn" id="finishBtn" onclick="finishAttempt()">Завершить</button>
+  </div>
+</div>
+
+{% if test.criteria %}
+<div class="alert info"><strong>Критерии оценки:</strong> {{ test.criteria }}</div>
+{% endif %}
+
+<div class="run-shell">
+  <div>
+    <div id="questionsWrap">
+      {% for q in test.questions %}
+      <div class="question" data-qid="{{ q.id }}" data-kind="{{ q.kind }}" data-points="{{ q.points }}">
+        <div class="q-head">
+          <div class="q-main">
+            <div class="q-meta">
+              <span class="q-index">Вопрос {{ loop.index }} из {{ test.questions|length }} · {{ q.points }} б.</span>
+              <span class="tag" data-status>не отвечен</span>
+            </div>
+            <div class="q-text">{{ q.text }}</div>
+          </div>
+        </div>
+
+        {% set options = q.options|from_json %}
+        {% if q.kind == 'single' %}
+          {% for opt in options %}
+          <label class="option">
+            <input type="radio" name="q{{ q.id }}" value="{{ opt }}" onchange="answerSingle({{ q.id }}, this)">
+            <span>{{ opt }}</span>
+          </label>
+          {% endfor %}
+        {% elif q.kind == 'multiple' %}
+          {% for opt in options %}
+          <label class="option">
+            <input type="checkbox" name="q{{ q.id }}" value="{{ opt }}" onchange="answerMultiple({{ q.id }})">
+            <span>{{ opt }}</span>
+          </label>
+          {% endfor %}
+          <button class="btn ghost small" onclick="answerMultiple({{ q.id }}, true)">Сохранить выбор</button>
+        {% else %}
+          <textarea placeholder="Введите ответ..." oninput="markDirty({{ q.id }})"></textarea>
+          <div class="btn-row" style="margin-top:8px">
+            <button class="btn ghost small" onclick="answerText({{ q.id }})">Сохранить ответ</button>
+            <span class="muted small">Ручной ввод: можно печатать сюда или отвечать голосом — текст вводится вручную</span>
+          </div>
+        {% endif %}
+
+        <div class="feedback hidden" data-feedback></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <aside>
+    <div class="panel" style="margin-bottom:14px">
+      <h3 style="margin-top:0">Рабочее место</h3>
+      <div class="media-box" id="mediaBox">
+        <div class="media-placeholder" id="mediaPlaceholder">Камера выключена</div>
+        <video id="cam" autoplay playsinline muted class="hidden"></video>
+      </div>
+      <div class="btn-row" style="margin-top:10px">
+        {% if test.use_camera %}<button class="btn ghost small" id="camBtn" onclick="toggleCamera()">Включить камеру</button>{% endif %}
+        {% if test.use_mic %}<button class="btn ghost small" id="micBtn" onclick="toggleMic()">Включить микрофон</button>{% endif %}
+      </div>
+      <div style="margin-top:12px">
+        <div class="muted small" style="display:flex;justify-content:space-between">
+          <span>Микрофон</span><span id="micState">выкл</span>
+        </div>
+        <div class="meter"><div id="micLevel"></div></div>
+      </div>
+      <p class="muted small" style="margin-top:10px">
+        Кадры с камеры уходят на сервер, где считается техника (темп, глубина, положение рук).
+        Видео не записывается и не хранится — в результате остаются только числа.
+        Микрофон пока только фиксирует факт включения.
+      </p>
+      <div class="muted small">Медиа: <span id="mediaMeta">камера выкл · микрофон выкл · 0 с</span></div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">Прогресс</h3>
+      <div class="timeline" id="timeline"></div>
+      <div style="margin-top:12px" class="muted small">Отвечено: <span id="answeredCount">0</span> / {{ test.questions|length }}</div>
+    </div>
+
+    <div class="panel">
+      <h3 style="margin-top:0">Субъект испытания</h3>
+      <select id="subjectSelect" onchange="subjectChanged()">
+        <option value="human" {{ 'selected' if test.subject_type == 'human' else '' }}>Человек</option>
+        <option value="imitation" {{ 'selected' if test.subject_type == 'imitation' else '' }}>Имитация предметами</option>
+      </select>
+      <p class="muted small" style="margin-top:8px">Можно уточнить перед началом.</p>
+    </div>
+  </aside>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script id="run-config" type="application/json">{"testId": {{ test.id }}, "mode": "{{ test.mode }}", "total": {{ test.questions|length }}}</script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/cpr_stream.js"></script>
+<script src="/static/js/student_run.js"></script>
+{% endblock %}
