@@ -242,6 +242,16 @@ tbody tr:hover { background: rgba(255,255,255,.02); }
    Брейкпоинты: 1024px — планшет, 760px — телефон, 420px — узкий телефон
    ========================================================================== */
 
+/* заголовки таблиц не рвутся по слогам («МЕДИ/А») */
+@media (min-width: 761px) {
+  .responsive-table th { white-space: nowrap; }
+  /* почта в таблице не рвётся посередине слова */
+  .responsive-table td .muted.small { white-space: nowrap; font-size: 12px; }
+  /* ручной ввод оценки — одной строкой */
+  .responsive-table td .btn-row { flex-wrap: nowrap; }
+  .responsive-table td .btn-row .btn { white-space: nowrap; }
+}
+
 /* --- двухколоночные раскладки (вместо инлайновых grid-template-columns) --- */
 .split-edit { grid-template-columns: 1fr 360px; align-items: start; }
 .split-two { grid-template-columns: 1fr 1fr; align-items: start; }

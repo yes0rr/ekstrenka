@@ -29,8 +29,11 @@
 {% endif %}
 
 <div class="alert info">
-  <strong>Нейропроверка:</strong> {{ attempt.neural_status }}.
-  {% if attempt.neural_comment %}{{ attempt.neural_comment }}{% endif %}
+  <strong>Нейропроверка:</strong>
+  {% if attempt.neural_status == 'done' %}выполнена
+  {% elif attempt.neural_status == 'stub' %}модуль отключён — балл выставлен по алгоритму критериев
+  {% else %}ожидает проверки{% endif %}.
+  {% if attempt.neural_comment and attempt.neural_status == 'done' %}{{ attempt.neural_comment }}{% endif %}
 </div>
 
 <div class="panel">

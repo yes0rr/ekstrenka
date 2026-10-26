@@ -19,7 +19,11 @@
           {% else %}<span class="tag bad">прервано</span>{% endif %}
         </td>
         <td class="mono">{{ a.final_score }} / {{ a.max_score }}</td>
-        <td data-label="Статус"><span class="tag warn">{{ a.neural_status }}</span></td>
+        <td data-label="Проверка">
+          {% if a.neural_status == 'done' %}<span class="tag ok">выполнена</span>
+          {% elif a.neural_status == 'stub' %}<span class="tag info">заглушка</span>
+          {% else %}<span class="tag warn">ожидает</span>{% endif %}
+        </td>
         <td class="right"><a class="btn ghost small" href="/student/attempts/{{ a.id }}">Подробнее</a></td>
       </tr>
     {% endfor %}

@@ -16,14 +16,23 @@ ispytaniya/
 │   │   ├── models.py          таблицы: User, Log, Test, Question, Attempt, Answer
 │   │   ├── security.py        Argon2 (пароли), сессионные cookie, запись логов
 │   │   ├── services.py        проверка ответов алгоритмом, пересчёт баллов
-│   │   ├── neural.py          ЗАГЛУШКА нейропроверки — сюда придёт модель
+│   │   ├── neural.py          балл/вердикт по агрегатам видеоанализа + точка для голоса
+│   │   ├── vision/            ВИДЕОАНАЛИЗ (MediaPipe Pose на сервере)
+│   │   │   ├── geometry.py    математика по точкам скелета: углы, темп, глубина
+│   │   │   ├── worker.py      отдельный процесс с моделью (не душит FastAPI)
+│   │   │   ├── slot.py        слоты + очередь FIFO + watchdog на 20 секунд
+│   │   │   ├── service.py     приём кадров (JPEG → метрики), сохранение итога
+│   │   │   └── scoring.py     балл 0–100 и вердикт по порогам
 │   │   ├── deps.py            текущий пользователь, проверка ролей, Jinja2
 │   │   ├── seed.py            демо-данные (2 пользователя + демо-испытание)
 │   │   └── routers/
 │   │       ├── auth.py        /login /register /logout /account + /api/auth/*
 │   │       ├── api.py         /api/tests /api/attempts /api/logs /api/users
+│   │       ├── vision.py      /api/attempts/{id}/frames, /vision/join|status|leave
 │   │       └── pages.py       рендер HTML-страниц (кабинеты, испытания, результаты)
+│   ├── models/                pose_landmarker_lite.task — модель позы (5,6 МБ)
 │   ├── tests/test_flow.py     смоук-тест: вход, роли, прохождение, оценка
+│   ├── tests/test_vision.py   25 тестов: геометрия, темп, слоты, оценка, приём кадра
 │   └── README.md              карта бэкенда
 │
 ├── frontend/                  ТОЛЬКО ТО, ЧТО ВИДИТ БРАУЗЕР
@@ -115,7 +124,8 @@ frontend/js/student_run.js          показывает «Верно / Неве
 - `backend/app/routers/` — «двери» приложения. `pages.py` отдаёт HTML, `api.py` отдаёт JSON, `auth.py` — вход и аккаунт. Сами ничего не считают, вызывают сервисы.
 - `backend/app/services.py` — вся логика проверки: одиночный выбор, множественный (частичный балл), текстовый с эталоном, ручная проверка.
 - `backend/app/models.py` — единственное место, где описан формат данных. Меняете поле → смотрите сюда.
-- `backend/app/neural.py` — одна функция `evaluate_attempt()`. Когда появится модель, правится только этот файл и переменная `NEURAL_ENABLED`.
+- `backend/app/neural.py` — одна функция `evaluate_attempt()`. Техника по камере уже подключена (балл из `vision/scoring.py`), голос подключается сюда же.
+- `backend/app/vision/` — видеоанализ. Кадры идут с фронта (`frontend/js/cpr_stream.js`) на `/api/attempts/{id}/frames`, обрабатываются в отдельном процессе и превращаются в числа. Видео не сохраняется.
 - `frontend/html/` — только разметка, без логики. Каждая страница наследует `base.html`.
 - `frontend/js/` — по файлу на страницу + общий `api.js`. Скрипты подключаются в `{% block scripts %}`.
 - `frontend/css/style.css` — один файл на весь сайт: `.panel`, `.btn`, `.tag`, `.grid` переиспользуются.
@@ -128,7 +138,9 @@ frontend/js/student_run.js          показывает «Верно / Неве
 | Новая страница | `frontend/html/*.html` + роут в `backend/app/routers/pages.py` |
 | Новое поле в испытании/попытке | `backend/app/models.py` (+ `api.py`, шаблоны) |
 | Другая логика оценки | `backend/app/services.py` |
-| Подключить нейросеть | `backend/app/neural.py` + `NEURAL_ENABLED=1` |
+| Подключить голос | `backend/app/neural.py` + `NEURAL_ENABLED=1` (этап 2) |
+| Поменять пороги СЛР | `backend/app/vision/geometry.py` (пороги) и `scoring.py` (веса балла) |
+| Изменить очередь станций | `MAX_VIDEO_SESSIONS`, `QUEUE_LIMIT`, `HEARTBEAT_TIMEOUT` в `.env` |
 | Другой вид кнопок/панелей | `frontend/css/style.css` |
 | Переменные окружения | `.env` (локально) или панель Timeweb |
 | Обновить демо-файл | `frontend/js/preview_app.js` → `python tools/build_preview.py` |

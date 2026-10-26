@@ -179,6 +179,7 @@ async function toggleCamera() {
     placeholder.textContent = 'Камера выключена';
     if (button) button.textContent = 'Включить камеру';
     updateMediaMeta();
+    if (window.CprStream) window.CprStream.stop();
     return;
   }
 
@@ -191,6 +192,8 @@ async function toggleCamera() {
     cameraOn = true;
     if (button) button.textContent = 'Выключить камеру';
     updateMediaMeta();
+    // кадры на сервер для анализа техники (если на сервере включён VISION_ENABLED)
+    if (window.CprStream && attemptId) window.CprStream.start(attemptId, video);
   } catch (error) {
     document.getElementById('mediaPlaceholder').textContent =
       'Нет доступа к камере: ' + error.message;
@@ -275,6 +278,7 @@ async function finishAttempt() {
   if (!confirm('Завершить испытание и получить результат?')) return;
 
   await sendMedia();
+  if (window.CprStream) await window.CprStream.stop();   // закрыть сессию видеоанализа
   try {
     const attempt = await apiFetch(`/api/attempts/${attemptId}/finish`, { method: 'POST' });
     window.location.href = '/student/attempts/' + attempt.id;
@@ -291,6 +295,7 @@ async function abortAttempt() {
   if (!confirm('Прервать испытание? Ответы сохранятся, попытка будет помечена как прерванная.')) return;
 
   await sendMedia();
+  if (window.CprStream) await window.CprStream.stop();
   try {
     await apiFetch(`/api/attempts/${attemptId}/abort`, { method: 'POST' });
   } catch (error) {

@@ -59,6 +59,26 @@ class Settings:
     # cookie только по HTTPS (на Timeweb включено по умолчанию)
     cookie_secure: bool = os.getenv("COOKIE_SECURE", "0") == "1"
 
+    # ---- видеоанализ (MediaPipe Pose на сервере) ----
+    # выключен по умолчанию: пока 0 — кадры не принимаются, mediapipe не нужен
+    vision_enabled: bool = os.getenv("VISION_ENABLED", "0") == "1"
+    # сколько попыток обрабатывается одновременно; на 2 ГБ сервере — 1
+    max_video_sessions: int = int(os.getenv("MAX_VIDEO_SESSIONS", "1"))
+    # целевая частота кадров с клиента (15 — рабочий режим, 30 — если позволяет CPU)
+    video_fps: int = int(os.getenv("VIDEO_FPS", "15"))
+    # размер очереди кадров у воркера: переполнение → выбрасываем самый старый
+    frame_buffer: int = int(os.getenv("FRAME_BUFFER", "30"))
+    # сколько секунд без кадров считаем обрывом и освобождаем слот
+    heartbeat_timeout: float = float(os.getenv("HEARTBEAT_TIMEOUT", "20"))
+    # сколько человек максимум ждут в очереди
+    queue_limit: int = int(os.getenv("QUEUE_LIMIT", "20"))
+    # оценка длительности станции для расчёта «ждать примерно N минут»
+    session_eta_sec: float = float(os.getenv("SESSION_ETA_SEC", "240"))
+    # путь к модели pose_landmarker_lite.task
+    pose_model_path: str = os.getenv(
+        "POSE_MODEL_PATH", str(BASE_DIR / "backend" / "models" / "pose_landmarker_lite.task")
+    )
+
 
 settings = Settings()
 

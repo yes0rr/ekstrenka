@@ -150,6 +150,10 @@ class Attempt(Base):
     neural_status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
     neural_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     neural_comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # видеоанализ техники: статус + все показатели одним JSON
+    # (off — не запускался, done — есть результат, expired — сессия оборвалась)
+    vision_status: Mapped[str] = mapped_column(String(20), default="off", nullable=False)
+    vision_data: Mapped[str | None] = mapped_column(Text, nullable=True)
     # ручной ввод оценки преподавателем
     manual_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     teacher_comment: Mapped[str | None] = mapped_column(Text, nullable=True)

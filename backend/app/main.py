@@ -12,7 +12,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .config import FRONTEND_DIR, settings
 from .db import init_db
 from .deps import render
-from .routers import api, auth, pages
+from .routers import api, auth, pages, vision
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
@@ -24,7 +24,13 @@ async def lifespan(app: FastAPI):
         from .seed import seed
 
         seed()
+    # видеоанализ: воркер MediaPipe поднимается только при VISION_ENABLED=1
+    from .vision import get_service
+
+    service = get_service()
+    service.start()
     yield
+    service.stop()
 
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
@@ -34,6 +40,7 @@ app.mount("/static/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="j
 
 app.include_router(auth.router)
 app.include_router(api.router)
+app.include_router(vision.router)
 app.include_router(pages.router)
 
 

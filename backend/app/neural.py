@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import Any
 
 from .config import settings
+from .vision.scoring import score_from_aggregates
 
 
 async def evaluate_attempt(payload: dict[str, Any]) -> dict[str, Any]:
@@ -32,6 +33,12 @@ async def evaluate_attempt(payload: dict[str, Any]) -> dict[str, Any]:
             "comment": str | None,
             "verdict": "pass" | "fail" | None}
     """
+    # 1) если по попытке есть видеоанализ — считаем технику по агрегатам
+    #    (это не нейросеть, а геометрия по точкам скелета; работает при VISION_ENABLED=1)
+    vision = payload.get("vision")
+    if settings.vision_enabled and vision:
+        return score_from_aggregates(vision)
+
     if not settings.neural_enabled:
         return {
             "status": "pending",

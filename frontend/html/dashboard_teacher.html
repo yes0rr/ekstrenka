@@ -50,7 +50,9 @@
           <tr>
             <td>{{ a.student.full_name }}<div class="muted small">{{ a.test.title }}</div></td>
             <td class="right">
-              <span class="tag {{ 'ok' if a.status == 'finished' else 'info' }}">{{ a.status }}</span>
+              <span class="tag {{ 'ok' if a.status == 'finished' else 'info' }}">
+                {% if a.status == 'finished' %}завершено{% elif a.status == 'in_progress' %}в процессе{% else %}прервано{% endif %}
+              </span>
               <div class="muted small mono">{{ a.final_score }} / {{ a.max_score }}</div>
             </td>
           </tr>

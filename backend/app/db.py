@@ -46,7 +46,38 @@ def session_scope() -> Iterator[Session]:
         db.close()
 
 
+# новые колонки, которые могли появиться после первого создания базы
+_ADDED_COLUMNS = {
+    "attempts": {
+        "vision_status": "VARCHAR(20) DEFAULT 'off' NOT NULL",
+        "vision_data": "TEXT",
+    },
+}
+
+
+def _ensure_added_columns() -> None:
+    """Дописать новые колонки в уже существующие таблицы.
+
+    create_all() не меняет созданные таблицы, поэтому при обновлении проекта
+    на работающем сервере колонки добавляем здесь. Операция идемпотентна.
+    """
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    for table, columns in _ADDED_COLUMNS.items():
+        if table not in existing_tables:
+            continue
+        present = {c["name"] for c in inspector.get_columns(table)}
+        for name, ddl in columns.items():
+            if name in present:
+                continue
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
+
+
 def init_db() -> None:
     from . import models  # noqa: F401  (нужно, чтобы описались таблицы)
 
     Base.metadata.create_all(bind=engine)
+    _ensure_added_columns()

@@ -147,6 +147,8 @@ def _attempt_dict(attempt: Attempt, *, include_answers: bool = False, for_studen
         "neural_status": attempt.neural_status,
         "neural_score": attempt.neural_score,
         "neural_comment": attempt.neural_comment,
+        "vision_status": attempt.vision_status,
+        "vision": loads(attempt.vision_data, None),
         "media": {
             "camera": attempt.camera_used,
             "mic": attempt.mic_used,
@@ -451,6 +453,14 @@ async def finish_attempt(attempt_id: int, request: Request, db: Session = Depend
     attempt.finished_at = utcnow()
     db.commit()
 
+    # если видеоанализ ещё идёт — закрываем его и сохраняем итог
+    from ..vision import get_service as _get_vision
+
+    vision_summary = _get_vision().leave(attempt.id)
+    if vision_summary is not None:
+        _get_vision().persist(attempt, vision_summary)
+        db.commit()
+
     payload = {
         "attempt_id": attempt.id,
         "test_title": attempt.test.title,
@@ -466,6 +476,7 @@ async def finish_attempt(attempt_id: int, request: Request, db: Session = Depend
             for a in attempt.answers
         ],
         "media": {"camera": attempt.camera_used, "mic": attempt.mic_used, "seconds": attempt.media_seconds},
+        "vision": loads(attempt.vision_data, None),
     }
     verdict = await evaluate_attempt(payload)
     attempt.neural_status = verdict.get("status", "pending")
