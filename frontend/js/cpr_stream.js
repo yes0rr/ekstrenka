@@ -43,13 +43,20 @@
     const box = document.createElement('div');
     box.id = 'cprLive';
     box.style.cssText = [
-      'position:relative', 'margin-top:6px', 'padding:6px 10px', 'border-radius:8px',
-      'background:#3C388D', 'color:#fff', 'font-size:12px', 'line-height:1.5',
-      'font-family:Verdana,Arial,sans-serif',
+      'margin-top:8px', 'padding:8px 12px', 'border-radius:10px',
+      'background:#3C388D', 'color:#fff', 'font-size:12.5px', 'line-height:1.5',
+      'font-family:Verdana,Arial,sans-serif', 'box-shadow:0 2px 10px rgba(0,0,0,.25)',
     ].join(';');
     box.textContent = 'Анализ техники: подключение…';
-    const host = state.video && state.video.parentElement;
-    if (host) host.appendChild(box);
+
+    // ВАЖНО: не внутрь .media-box (там overflow:hidden и плашка обрезается),
+    // а сразу после него — в родительскую колонку.
+    const mediaBox = document.getElementById('mediaBox');
+    if (mediaBox && mediaBox.parentElement) {
+      mediaBox.parentElement.insertBefore(box, mediaBox.nextSibling);
+    } else if (state.video && state.video.parentElement) {
+      state.video.parentElement.appendChild(box);
+    }
     state.pill = box;
     return box;
   }
@@ -155,11 +162,12 @@
     if (live.arms_straight_pct !== null && live.arms_straight_pct !== undefined) {
       parts.push(`руки прямые ${Math.round(live.arms_straight_pct)}%`);
     }
-    if (live.frames_with_pose === 0) {
-      say('Анализ техники: человек в кадре не распознан — проверьте ракурс');
+    if (!live.frames_with_pose) {
+      say(`Анализ техники: кадр ${live.frames_total || answer.seq}, человек не распознан — встаньте в кадр целиком, камера сбоку`);
       return;
     }
-    say('Анализ техники: ' + (parts.length ? parts.join(' · ') : 'накапливаем данные…'));
+    const tail = ` · кадров ${live.frames_with_pose}`;
+    say('Анализ техники: ' + (parts.length ? parts.join(' · ') + tail : 'накапливаем данные…' + tail));
   }
 
   /* ---------------- публичный API ---------------- */

@@ -34,6 +34,7 @@ async function startAttempt() {
     attemptId = attempt.id;
     if (attempt.started_at) startedAt = new Date(attempt.started_at).getTime();
     renderTimeline();
+    maybeStartAnalysis();      // камера могла быть включена до старта попытки
   } catch (error) {
     alert(error.message);
   }
@@ -181,6 +182,22 @@ function cameraBlockedReason() {
   return null;
 }
 
+/* Анализ техники запускается только при активной попытке.
+   Если камеру включили раньше, чем нажали «Начать», ждём старта и объясняем это. */
+function maybeStartAnalysis() {
+  const video = document.getElementById('cam');
+  if (!window.CprStream || !cameraOn || !video) return;
+  if (attemptId) {
+    if (!window.CprStream.isRunning()) window.CprStream.start(attemptId, video);
+    return;
+  }
+  const placeholder = document.getElementById('mediaPlaceholder');
+  if (placeholder) {
+    placeholder.classList.remove('hidden');
+    placeholder.textContent = 'Камера включена. Нажмите «Начать тестирование» — после этого пойдёт анализ техники.';
+  }
+}
+
 function showMediaProblem(text) {
   const placeholder = document.getElementById('mediaPlaceholder');
   if (placeholder) {
@@ -225,7 +242,7 @@ async function toggleCamera() {
     if (button) button.textContent = 'Выключить камеру';
     updateMediaMeta();
     // кадры на сервер для анализа техники (если на сервере включён VISION_ENABLED)
-    if (window.CprStream && attemptId) window.CprStream.start(attemptId, video);
+    maybeStartAnalysis();
   } catch (error) {
     const name = (error && error.name) || '';
     let text = 'Нет доступа к камере: ' + (error && error.message ? error.message : 'неизвестная ошибка');
