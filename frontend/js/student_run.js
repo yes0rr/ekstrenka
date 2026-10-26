@@ -166,6 +166,31 @@ function answerText(questionId) {
 
 /* ---------------- камера и микрофон ---------------- */
 
+/* Браузер отдаёт камеру только на https:// или localhost.
+   По http://<ip> объекта navigator.mediaDevices просто нет. */
+function cameraBlockedReason() {
+  if (!window.isSecureContext) {
+    return 'Камера доступна только по защищённому адресу (https://). ' +
+           'Сейчас страница открыта по http:// — откройте сайт через https, ' +
+           'и камера включится.';
+  }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return 'Браузер не поддерживает доступ к камере. Откройте сайт в Chrome, Edge или Safari ' +
+           'последней версии.';
+  }
+  return null;
+}
+
+function showMediaProblem(text) {
+  const placeholder = document.getElementById('mediaPlaceholder');
+  if (placeholder) {
+    placeholder.classList.remove('hidden');
+    placeholder.textContent = text;
+  }
+  const status = document.getElementById('camState');
+  if (status) status.textContent = 'нет доступа';
+}
+
 async function toggleCamera() {
   const button = document.getElementById('camBtn');
 
@@ -183,6 +208,13 @@ async function toggleCamera() {
     return;
   }
 
+  const blocked = cameraBlockedReason();
+  if (blocked) {
+    showMediaProblem(blocked);
+    if (button) button.textContent = 'Включить камеру';
+    return;
+  }
+
   try {
     camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
     const video = document.getElementById('cam');
@@ -195,8 +227,17 @@ async function toggleCamera() {
     // кадры на сервер для анализа техники (если на сервере включён VISION_ENABLED)
     if (window.CprStream && attemptId) window.CprStream.start(attemptId, video);
   } catch (error) {
-    document.getElementById('mediaPlaceholder').textContent =
-      'Нет доступа к камере: ' + error.message;
+    const name = (error && error.name) || '';
+    let text = 'Нет доступа к камере: ' + (error && error.message ? error.message : 'неизвестная ошибка');
+    if (name === 'NotAllowedError') {
+      text = 'Доступ к камере запрещён. Нажмите на иконку камеры в адресной строке и выберите «Разрешить», затем повторите.';
+    } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      text = 'Камера не найдена. Подключите её и повторите попытку.';
+    } else if (name === 'NotReadableError') {
+      text = 'Камера занята другой программой (Zoom, Teams, Skype). Закройте её и повторите.';
+    }
+    showMediaProblem(text);
+    if (button) button.textContent = 'Включить камеру';
   }
 }
 

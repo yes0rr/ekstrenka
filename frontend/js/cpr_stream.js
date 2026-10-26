@@ -167,6 +167,7 @@
   const CprStream = {
     start(attemptId, videoElement) {
       if (!attemptId || !videoElement) return;
+      if (!window.isSecureContext) return;   // камера недоступна по http — молча выходим
       this.stop();
       state.running = true;
       state.attemptId = attemptId;
