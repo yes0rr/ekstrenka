@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from ..db import get_db
 from ..deps import get_current_user, render
-from ..models import Answer, Attempt, Log, Mode, Role, Test, User
+from ..models import Answer, Attempt, AttemptStatus, Log, Mode, Role, Test, User
 from ..services import loads
 
 router = APIRouter(tags=["pages"], include_in_schema=False)
@@ -208,7 +208,28 @@ def emergency_help_instruction(request: Request, user: User | None = Depends(get
 
 # ----------------------------- обучение / тренировочный режим -----------------------------
 @router.get("/training")
-def training_page(request: Request, user: User | None = Depends(get_current_user)):
+def training_page(request: Request, db: Session = Depends(get_db),
+                  user: User | None = Depends(get_current_user)):
+    """Точка входа «Обучение»: список опубликованных испытаний.
+
+    Раньше здесь была заглушка с модальным окном — камера включалась, а дальше
+    ничего не происходило. Теперь это честный список со ссылками на прохождение.
+    """
     if (redirect := _guard(user)) is not None:
         return redirect
-    return render(request, "training.html", user)
+    tests = db.scalars(
+        select(Test)
+        .options(selectinload(Test.questions))
+        .where(Test.is_published.is_(True))
+        .order_by(Test.mode.desc(), Test.created_at.desc())
+    ).all()
+    open_attempts = {}
+    if user.role == Role.student.value:
+        rows = db.scalars(
+            select(Attempt).where(
+                Attempt.student_id == user.id,
+                Attempt.status == AttemptStatus.in_progress.value,
+            )
+        ).all()
+        open_attempts = {a.test_id: a.id for a in rows}
+    return render(request, "training.html", user, tests=tests, open_attempts=open_attempts)
