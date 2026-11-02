@@ -34,7 +34,7 @@
     <div class="meta small">
       <span>{{ t.questions|length }} вопр.</span>
       <span>{{ t.duration_min }} мин</span>
-      <span>{{ t.max_score }} баллов</span>
+      <span>{{ t.max_score|num }} баллов</span>
       {% if t.use_camera %}<span>камера</span>{% endif %}
       {% if t.use_mic %}<span>микрофон</span>{% endif %}
     </div>

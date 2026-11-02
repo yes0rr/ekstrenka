@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Экстренка{% endblock %}</title>
   <link rel="stylesheet" href="/static/css/style.css">
+  <script>
+    /* тема и язык ставятся до отрисовки — без мигания светлым фоном */
+    (function () {
+      try {
+        var t = localStorage.getItem("ekstrenka.theme") || "dark";
+        var a = localStorage.getItem("ekstrenka.accent") || "blue";
+        var l = localStorage.getItem("ekstrenka.lang") || "ru";
+        document.documentElement.setAttribute("data-theme", t);
+        document.documentElement.setAttribute("data-accent", a);
+        document.documentElement.lang = l;
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
 {% if user %}
@@ -47,6 +60,8 @@
 </main>
 
 <script src="/static/js/nav.js"></script>
+<script src="/static/js/i18n.js"></script>
+<script src="/static/js/ui.js"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

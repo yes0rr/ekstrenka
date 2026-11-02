@@ -1,0 +1,4 @@
+id,file,student,expert,date,tempo_ok,depth_ok,arms_straight_ok,arms_vertical_ok,hands_together_ok,comment
+s01_01,s01_01.webm,s01,expert_A,2026-11-05,1,1,1,1,0,кисти чуть разведены
+s01_02,s01_02.webm,s01,expert_A,2026-11-05,1,0,1,1,1,продавливает неглубоко
+s02_01,s02_01.webm,s02,expert_A,2026-11-05,0,1,0,1,0,торопится и сгибает локти

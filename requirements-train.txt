@@ -1,0 +1,8 @@
+# Сбор датасета и обучение модели. Ставить на ноутбуке, не на сервере.
+# Видеоанализ на сервере: pip install -r requirements-vision.txt (mediapipe, opencv, numpy)
+
+scikit-learn==1.7.2
+joblib==1.5.2
+mediapipe==1.1.1
+opencv-python-headless==4.12.0.88
+numpy==2.2.6

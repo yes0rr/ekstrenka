@@ -5,7 +5,7 @@
 <div class="panel-head">
   <div>
     <h1>{{ test.title }}</h1>
-    <p class="muted">{{ test.description or 'Без описания' }} · {{ test.duration_min }} мин · максимум {{ test.max_score }} баллов</p>
+    <p class="muted">{{ test.description or 'Без описания' }} · {{ test.duration_min }} мин · максимум {{ test.max_score|num }} баллов</p>
   </div>
   <div class="btn-row">
     <a class="btn ghost" href="/teacher/results?test_id={{ test.id }}">Результаты</a>

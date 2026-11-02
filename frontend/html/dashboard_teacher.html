@@ -53,7 +53,7 @@
               <span class="tag {{ 'ok' if a.status == 'finished' else 'info' }}">
                 {% if a.status == 'finished' %}завершено{% elif a.status == 'in_progress' %}в процессе{% else %}прервано{% endif %}
               </span>
-              <div class="muted small mono">{{ a.final_score }} / {{ a.max_score }}</div>
+              <div class="muted small mono">{{ a.final_score|num }} / {{ a.max_score|num }}</div>
             </td>
           </tr>
         {% endfor %}

@@ -86,7 +86,7 @@ class MediaIn(BaseModel):
 
 class ManualResultIn(BaseModel):
     manual_score: float = Field(ge=0)
-    teacher_comment: str | None = None
+    teacher_comment: str | None = None  # длину режем при сохранении, а не ошибкой 422
 
 
 # ----------------------------- helpers -----------------------------
@@ -512,8 +512,12 @@ def manual_result(attempt_id: int, payload: ManualResultIn, request: Request, db
         raise HTTPException(403, "Это не ваше испытание")
     if payload.manual_score > (attempt.max_score or 0):
         raise HTTPException(400, f"Балл не может быть больше максимума ({attempt.max_score})")
+    # комментарий чистим: убираем переводы строк и лишние пробелы, режем до 300 символов
+    comment = " ".join((payload.teacher_comment or "").split()).strip() or None
+    if comment:
+        comment = comment[:300]
     attempt.manual_score = payload.manual_score
-    attempt.teacher_comment = payload.teacher_comment
+    attempt.teacher_comment = comment
     db.commit()
     write_log(db, "manual_result", request=request, user_id=user.id, entity="attempt", entity_id=attempt.id,
               payload={"manual_score": payload.manual_score})

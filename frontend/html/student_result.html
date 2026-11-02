@@ -16,24 +16,50 @@
   <a class="btn ghost" href="/student/attempts">Все попытки</a>
 </div>
 
+{% set total_q = attempt.test.questions|length %}
+{% set answered = attempt.answers|length %}
+{% set auto_points = attempt.score|num %}
 <div class="grid stats" style="margin-bottom:18px">
-  <div class="stat"><div class="value">{{ attempt.final_score }}</div><div class="label">итоговый балл из {{ attempt.max_score }}</div></div>
-  <div class="stat"><div class="value">{{ attempt.score }}</div><div class="label">по алгоритму</div></div>
-  <div class="stat"><div class="value">{{ attempt.answers|length }}</div><div class="label">ответов</div></div>
-  <div class="stat"><div class="value">{{ attempt.media_seconds }}с</div><div class="label">медиа (камера/микрофон)</div></div>
+  <div class="stat">
+    <div class="value">{{ attempt.final_score|num }}<span class="stat-of">/ {{ attempt.max_score|num }}</span></div>
+    <div class="label">итоговый балл{% if attempt.max_score %} · {{ attempt.final_score|pct(attempt.max_score) }}{% endif %}</div>
+    <div class="stat-src">{{ 'выставил преподаватель' if attempt.manual_score is not none else 'автоматически' }}</div>
+  </div>
+  <div class="stat">
+    <div class="value">{{ auto_points }}<span class="stat-of">/ {{ attempt.max_score|num }}</span></div>
+    <div class="label">по ответам (авто)</div>
+    <div class="stat-src">{{ 'перекрыт оценкой преподавателя' if attempt.manual_score is not none else 'итог считается по этому баллу' }}</div>
+  </div>
+  <div class="stat">
+    <div class="value">{{ answered }}<span class="stat-of">/ {{ total_q }}</span></div>
+    <div class="label">отвечено вопросов</div>
+    <div class="stat-src">{{ 'не отвечен ни один' if answered == 0 else 'ответы сохранены' }}</div>
+  </div>
+  <div class="stat">
+    <div class="value">{{ attempt.media_seconds|duration }}</div>
+    <div class="label">медиа (камера/микрофон)</div>
+    <div class="stat-src">{{ 'камера и микрофон не включались' if not attempt.media_seconds else 'длительность работы медиа' }}</div>
+  </div>
 </div>
 
+{% if attempt.manual_score is not none and answered == 0 %}
+<div class="alert info">
+  <strong>Балл выставлен вручную.</strong> Автоматическая проверка не начислила ни одного балла,
+  потому что ответов нет, — итог взят из оценки преподавателя.
+</div>
+{% endif %}
+
 {% if attempt.manual_score is not none %}
-<div class="alert ok"><strong>Оценка преподавателя:</strong> {{ attempt.manual_score }} б.
-  {% if attempt.teacher_comment %}— {{ attempt.teacher_comment }}{% endif %}</div>
+<div class="alert ok"><strong>Оценка преподавателя:</strong> {{ attempt.manual_score|num }} б.
+  {% if attempt.teacher_comment %}<div class="comment-body">{{ attempt.teacher_comment }}</div>{% endif %}</div>
 {% endif %}
 
 <div class="alert info">
   <strong>Нейропроверка:</strong>
-  {% if attempt.neural_status == 'done' %}выполнена
-  {% elif attempt.neural_status == 'stub' %}модуль отключён — балл выставлен по алгоритму критериев
-  {% else %}ожидает проверки{% endif %}.
-  {% if attempt.neural_comment and attempt.neural_status == 'done' %}{{ attempt.neural_comment }}{% endif %}
+  {%- if attempt.neural_status == 'done' %} выполнена.
+  {%- elif attempt.neural_status == 'stub' %} модуль отключён — балл выставлен по алгоритму критериев.
+  {%- else %} ожидает проверки.{% endif %}
+  {%- if attempt.neural_comment and attempt.neural_status == 'done' %} {{ attempt.neural_comment }}{% endif %}
 </div>
 
 <div class="panel">
@@ -43,7 +69,7 @@
     <div class="question">
       <div class="q-head">
         <div>
-          <div class="q-index">Вопрос {{ loop.index }} · {{ q.points }} б.</div>
+          <div class="q-index">Вопрос {{ loop.index }} · {{ q.points|num }} б.</div>
           <div>{{ q.text }}</div>
         </div>
         {% if a and a.is_correct == true %}<span class="tag ok">верно</span>
@@ -58,7 +84,7 @@
           {{ v if v is string else (v|join(', ') if v else '—') }}
         {% else %}—{% endif %}
       </div>
-      <div class="small muted" style="margin-top:4px">Начислено: {{ a.awarded_points if a else 0 }} б.</div>
+      <div class="small muted" style="margin-top:4px">Начислено: {{ (a.awarded_points if a else 0)|num }} б. из {{ q.points|num }} б.</div>
       {% if attempt.mode == 'training' %}
         {% set correct = q.correct|from_json(none) %}
         {% if correct %}

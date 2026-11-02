@@ -18,7 +18,7 @@
           {% elif a.status == 'in_progress' %}<span class="tag info">в процессе</span>
           {% else %}<span class="tag bad">прервано</span>{% endif %}
         </td>
-        <td class="mono">{{ a.final_score }} / {{ a.max_score }}</td>
+        <td class="mono">{{ a.final_score|num }} / {{ a.max_score|num }}</td>
         <td data-label="Проверка">
           {% if a.neural_status == 'done' %}<span class="tag ok">выполнена</span>
           {% elif a.neural_status == 'stub' %}<span class="tag info">заглушка</span>

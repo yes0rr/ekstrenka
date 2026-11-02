@@ -37,6 +37,7 @@ app = FastAPI(title=settings.app_name, lifespan=lifespan)
 # фронтенд: статика раздельно по типам
 app.mount("/static/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css")
 app.mount("/static/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js")
+app.mount("/static/img", StaticFiles(directory=str(FRONTEND_DIR / "img")), name="img")
 
 app.include_router(auth.router)
 app.include_router(api.router)

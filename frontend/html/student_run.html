@@ -7,7 +7,7 @@
     <p class="muted">
       {{ 'Режим обучения — с разбором ответов' if test.mode == 'training' else 'Режим тестирования — без подсказок' }}
       · {{ 'на человеке' if test.subject_type == 'human' else 'имитация предметами' }}
-      · {{ test.questions|length }} вопр. · {{ test.max_score }} баллов
+      · {{ test.questions|length }} вопр. · {{ test.max_score|num }} баллов
     </p>
   </div>
   <div class="btn-row">
@@ -89,6 +89,26 @@
         Микрофон пока только фиксирует факт включения.
       </p>
       <div class="muted small">Медиа: <span id="mediaMeta">камера выкл · микрофон выкл · 0 с</span></div>
+
+      {# памятка по съёмке: свёрнута, чтобы не мешать тем, кто уже настроил камеру #}
+      <details class="camera-help" id="cameraHelp">
+        <summary>Как поставить камеру и встать в кадре</summary>
+
+        <div class="camera-help-body">
+          <p class="muted small">Камера строго сбоку и с другой стороны манекена, чем тот, кто делает компрессии: иначе спина закрывает руки. Расстояние 2–3 метра, высота — на уровне груди.</p>
+          <a class="camera-help-zoom" href="/static/img/camera_scheme.png" target="_blank" rel="noopener" title="Открыть крупно">
+            <img src="/static/img/camera_scheme.png" alt="Схема: камера сбоку, человек с другой стороны манекена" loading="lazy">
+          </a>
+
+          <p class="muted small" style="margin-top:10px">В кадре должны быть голова, плечи и руки целиком. Кисти не должны уходить за край кадра — иначе глубина и положение рук не считаются.</p>
+          <a class="camera-help-zoom" href="/static/img/camera_frames.png" target="_blank" rel="noopener" title="Открыть крупно">
+            <img src="/static/img/camera_frames.png" alt="Три кадра: правильный, слишком далеко, руки обрезаны" loading="lazy">
+          </a>
+
+          <p class="muted small" style="margin-top:10px">Нажмите на картинку — откроется крупно.</p>
+          <p class="muted small">Проверка за 10 секунд: запишите короткое видео и посмотрите, видно ли кисти в самой нижней точке нажатия. Если кисти срезаны — отодвиньте камеру или поднимите её чуть выше.</p>
+        </div>
+      </details>
     </div>
 
     <div class="panel">

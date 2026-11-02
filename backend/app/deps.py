@@ -23,6 +23,47 @@ def _from_json(value, default=()):
 templates.env.filters["from_json"] = _from_json
 
 
+def _num(value, digits: int = 1) -> str:
+    """6.0 -> «6», 4.50 -> «4.5», None -> «—». Убирает хвостовые нули в баллах."""
+    if value is None:
+        return "—"
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if abs(v - round(v)) < 1e-9:
+        return str(int(round(v)))
+    return f"{v:.{digits}f}".rstrip("0").rstrip(".")
+
+
+def _duration(seconds) -> str:
+    """0 -> «0 с», 75 -> «1 мин 15 с». Пробел между числом и «с»."""
+    try:
+        total = int(round(float(seconds or 0)))
+    except (TypeError, ValueError):
+        total = 0
+    if total <= 0:
+        return "0 с"
+    minutes, sec = divmod(total, 60)
+    return f"{minutes} мин {sec} с" if minutes else f"{sec} с"
+
+
+def _pct(part, whole) -> str:
+    """Доля в процентах целым числом; при whole <= 0 — пустая строка."""
+    try:
+        part_f, whole_f = float(part or 0), float(whole or 0)
+    except (TypeError, ValueError):
+        return ""
+    if whole_f <= 0:
+        return ""
+    return f"{round(part_f / whole_f * 100)}%"
+
+
+templates.env.filters["num"] = _num
+templates.env.filters["duration"] = _duration
+templates.env.filters["pct"] = _pct
+
+
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> User | None:
     token = request.cookies.get(COOKIE_NAME)
     if not token:
