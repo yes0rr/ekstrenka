@@ -321,6 +321,13 @@
     "Вопросы (": "Questions (",
     "ожидает проверки.": "pending.",
     "Необязательно": "Optional",
+    "заглушка": "stub",
+    "имитация": "imitation",
+    "имитация предметами": "imitation with props",
+    "модуль отключён — балл выставлен по алгоритму критериев.":
+      "module is off — the score is calculated by the criteria algorithm.",
+    "Оценка = алгоритм (авто) + ручной ввод; нейропроверка — заглушка":
+      "Score = algorithm (auto) + manual entry; neural check is a stub",
     "Правильный вариант": "Correct option",
     "Нажмите на картинку — откроется крупно.": "Click a picture to open it full size.",
     "Открыть крупно": "Open full size",

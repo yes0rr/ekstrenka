@@ -11,6 +11,7 @@
     python run_local.py
     python run_local.py --port 9000     # другой порт
     python run_local.py --no-browser    # не открывать браузер
+    python run_local.py --vision        # включить видеоанализ (MediaPipe), нужен для съёмки
 """
 from __future__ import annotations
 
@@ -72,6 +73,29 @@ def ensure_venv() -> Path:
     return python
 
 
+def ensure_vision(python: Path) -> bool:
+    """Ставит MediaPipe, если его нет, и включает видеоанализ. True — видеоанализ доступен."""
+    check = subprocess.run([str(python), "-c", "import mediapipe, cv2"], capture_output=True)
+    if check.returncode != 0:
+        requirements = BASE_DIR / "requirements-vision.txt"
+        say("Ставлю видеоанализ (MediaPipe + OpenCV), это около 200 МБ и 2-5 минут...")
+        done = subprocess.call([str(python), "-m", "pip", "install", "--quiet", "-r", str(requirements)])
+        if done != 0:
+            say("")
+            say("Не получилось поставить видеоанализ. Сайт запустится без него:")
+            say("числа по технике считаться не будут, остальное работает.")
+            if os.name != "nt":
+                say("На Linux перед этим может понадобиться:")
+                say("  apt-get install -y libgl1 libglib2.0-0 libgles2 libglvnd0 && ldconfig")
+            return False
+    model = BASE_DIR / "backend" / "models" / "pose_landmarker_lite.task"
+    if not model.exists():
+        say("Скачиваю модель позы (5,7 МБ)...")
+        subprocess.call([str(python), str(BASE_DIR / "tools" / "download_pose_model.py")])
+    os.environ["VISION_ENABLED"] = "1"
+    return True
+
+
 def ensure_env() -> None:
     if ENV_FILE.exists():
         return
@@ -116,6 +140,11 @@ def serve(port: int, open_browser: bool) -> None:
     say("  Преподаватель: teacher@example.com / teacher123")
     say("  Учащийся:      student@example.com / student123")
     say("")
+    if os.getenv("VISION_ENABLED") == "1":
+        say("  Видеоанализ:          включён (числа по технике считаются)")
+    else:
+        say("  Видеоанализ:          выключен (только вопросы и результаты)")
+    say("")
     say("  Остановить: Ctrl+C или закройте это окно")
     say("=" * 56)
     say("")
@@ -130,6 +159,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument("--port", type=int, default=int(os.getenv("PORT", "8000")))
     parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument("--vision", action="store_true", help="включить видеоанализ (MediaPipe)")
     args = parser.parse_args()
 
     if sys.version_info < MIN_PYTHON:
@@ -157,11 +187,18 @@ def main() -> int:
     ensure_env()
     ensure_demo_data(python)
 
+    vision_ready = False
+    if args.vision:
+        vision_ready = ensure_vision(python)
+        say("Видеоанализ: включён" if vision_ready else "Видеоанализ: выключен (работает без него)")
+
     if not in_venv(python):
         # перезапускаем себя уже интерпретатором из venv — там есть fastapi и uvicorn
         command = [str(python), str(Path(__file__).resolve()), "--port", str(args.port)]
         if args.no_browser:
             command.append("--no-browser")
+        if args.vision:
+            command.append("--vision")
         completed = subprocess.call(command, cwd=str(BASE_DIR))
         if completed != 0 and os.name == "nt":
             input("Нажмите Enter, чтобы закрыть окно...")

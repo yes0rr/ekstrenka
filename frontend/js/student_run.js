@@ -41,7 +41,7 @@ async function startAttempt() {
 }
 
 function tick() {
-  const seconds = Math.floor((Date.now() - startedAt) / 1000);
+  const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
   const minutes = String(Math.floor(seconds / 60)).padStart(2, '0');
   const rest = String(seconds % 60).padStart(2, '0');
   document.getElementById('timerTag').textContent = minutes + ':' + rest;

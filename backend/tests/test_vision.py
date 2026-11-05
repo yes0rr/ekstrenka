@@ -260,11 +260,20 @@ def test_decode_rejects_empty():
 
 
 # ------------------------------------------------------------------ выключенный режим
-def test_disabled_service_refuses_frames():
-    """VISION_ENABLED=0 (по умолчанию): кадры не принимаются, внятная ошибка."""
-    from backend.app.vision.service import VisionDisabledError, get_service
+def test_disabled_service_refuses_frames(monkeypatch):
+    """VISION_ENABLED=0 (по умолчанию): кадры не принимаются, внятная ошибка.
 
-    service = get_service()
+    Тест не должен зависеть от локального .env: на машине, где видеоанализ включён
+    для съёмки, флаг выставляется принудительно.
+    """
+    monkeypatch.setenv("VISION_ENABLED", "0")
+    from backend.app.config import settings
+    from backend.app.vision import service as service_module
+    from backend.app.vision.service import VisionDisabledError
+
+    monkeypatch.setattr(settings, "vision_enabled", False, raising=False)
+    service_module._service = None  # сбрасываем синглтон, чтобы флаг перечитался
+    service = service_module.get_service()
     assert service.stats()["enabled"] is False
     with pytest.raises(VisionDisabledError):
         service.join(1)
