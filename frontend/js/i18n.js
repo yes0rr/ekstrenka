@@ -328,6 +328,22 @@
       "module is off — the score is calculated by the criteria algorithm.",
     "Оценка = алгоритм (авто) + ручной ввод; нейропроверка — заглушка":
       "Score = algorithm (auto) + manual entry; neural check is a stub",
+    "Видеотест": "Video test",
+    "Видеотест: алгоритм станции ЭМП": "Video test: emergency care station algorithm",
+    "Отвечено": "Answered",
+    "Проверка ответа сразу": "Answer checked immediately",
+    "Зачёт: разбор в конце": "Exam mode: review at the end",
+    "Завершить и увидеть разбор": "Finish and see the review",
+    "Верно": "Correct",
+    "Неверно — правильный вариант:": "Incorrect — correct option:",
+    "Ответа нет — правильный вариант:": "No answer — correct option:",
+    "Ответ принят — вердикт будет в конце": "Answer accepted — verdict at the end",
+    "Паспорт станции:": "Station passport:",
+    "Результат": "Result",
+    "Прошлые прохождения": "Previous attempts",
+    "Пройти заново": "Start over",
+    "Обучение": "Training",
+    "Зачёт": "Exam",
     "Правильный вариант": "Correct option",
     "Нажмите на картинку — откроется крупно.": "Click a picture to open it full size.",
     "Открыть крупно": "Open full size",
@@ -411,6 +427,18 @@
     [/^Вопрос (\d+) · (.+)$/, "Question $1 · $2"]
   ];
 
+  // расширенный словарь (страницы-справки, демо-данные, видеотест) подключается файлом i18n_extra.js
+  var EXTRA_PATTERNS = [];
+  if (window.I18N_EXTRA) {
+    Object.keys(window.I18N_EXTRA).forEach(function (key) {
+      if (key === "__patterns") return;
+      if (!Object.prototype.hasOwnProperty.call(DICT, key)) DICT[key] = window.I18N_EXTRA[key];
+    });
+    (window.I18N_EXTRA.__patterns || []).forEach(function (pair) {
+      EXTRA_PATTERNS.push([new RegExp(pair[0]), pair[1]]);
+    });
+  }
+
   var TEXT_ATTRS = ["placeholder", "title", "aria-label"];
 
   // единицы и обрывки, которые надо чинить и после основного перевода
@@ -430,42 +458,97 @@
       .replace(/\bтестирование\b/g, "examination");
   }
 
+  /* шаблон, который должен совпасть со всей строкой (^…$) — он точнее частичного */
+  function isAnchored(pattern) {
+    var source = pattern.source;
+    return source.charAt(0) === "^" && source.charAt(source.length - 1) === "$";
+  }
+
   function translateLine(key) {
     if (Object.prototype.hasOwnProperty.call(DICT, key)) return DICT[key];
-    for (var i = 0; i < PATTERNS.length; i++) {
-      if (PATTERNS[i][0].test(key)) return key.replace(PATTERNS[i][0], PATTERNS[i][1]);
+    var all = PATTERNS.concat(EXTRA_PATTERNS);
+    // сначала точные шаблоны на всю строку, потом частичные: иначе /(\d+) баллов/
+    // съест «максимум 10 баллов» раньше, чем сработает /^максимум (\d+) баллов$/
+    var ordered = all.filter(function (pair) { return isAnchored(pair[0]); })
+      .concat(all.filter(function (pair) { return !isAnchored(pair[0]); }));
+    for (var i = 0; i < ordered.length; i++) {
+      if (ordered[i][0].test(key)) return key.replace(ordered[i][0], ordered[i][1]);
     }
     return null;
+  }
+
+  /* сколько в строке русских букв — по нему выбираем лучший вариант перевода */
+  function cyrillicCount(text) {
+    var found = String(text).match(/[А-Яа-яЁё]/g);
+    return found ? found.length : 0;
+  }
+
+  /* перевод по частям, разделённым «·»: «Режим обучения · имитация · 2 баллов» */
+  function translateParts(text) {
+    var pieces = text.split("·");
+    if (pieces.length < 2) return null;
+    var changed = false;
+    var out = pieces.map(function (piece) {
+      var part = piece.trim();
+      if (!part) return "";
+      var line = translateLine(part);
+      if (line !== null) { changed = true; return line; }
+      return part;
+    });
+    return changed ? out.filter(Boolean).join(" · ") : null;
   }
 
   function translateString(text) {
     var raw = String(text).trim();
     if (!raw) return null;
 
+    var candidates = [];
+
     // 1) точное совпадение со словарём или шаблоном
     var direct = translateLine(raw);
-    if (direct !== null) return polishUnits(direct);
+    if (direct !== null) candidates.push(direct);
 
     // 2) многострочный текст (placeholder из нескольких вариантов) — по строкам
     if (raw.indexOf("\n") >= 0) {
       var changed = false;
-      var parts = raw.split("\n").map(function (line) {
+      var lines = raw.split("\n").map(function (line) {
         var t = line.trim();
         if (!t) return "";
         var r = translateLine(t);
         if (r !== null) { changed = true; return r; }
         return t;
       });
-      if (changed) return parts.filter(Boolean).join("\n");
+      if (changed) candidates.push(lines.filter(Boolean).join("\n"));
     }
 
     // 3) переносы строк и отступы внутри абзаца — как обычные пробелы
     var flat = raw.replace(/\s+/g, " ");
-    var found = translateLine(flat);
-    if (found !== null) return polishUnits(found);
+    if (flat !== raw) {
+      var found = translateLine(flat);
+      if (found !== null) candidates.push(found);
+    }
 
-    var polished = polishUnits(flat);
-    return polished !== flat ? polished : null;
+    // 4) фраза склеена из кусков через «·» — переводим каждый кусок
+    var parts = translateParts(flat);
+    if (parts !== null) candidates.push(parts);
+
+    if (!candidates.length) {
+      var polishedOnly = polishUnits(flat);
+      return polishedOnly !== flat ? polishedOnly : null;
+    }
+
+    // выбираем вариант с наименьшим числом русских букв
+    var best = null;
+    var bestScore = cyrillicCount(raw);
+    candidates.forEach(function (candidate) {
+      var polished = polishUnits(candidate);
+      var score = cyrillicCount(polished);
+      if (score < bestScore || (best === null && score <= bestScore)) {
+        best = polished;
+        bestScore = score;
+      }
+    });
+    return best;
   }
 
   var SKIP = { SCRIPT: 1, STYLE: 1, CODE: 1, PRE: 1, TEXTAREA: 1 };
@@ -573,6 +656,18 @@
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
+  /* заголовок вкладки: «Обучение · Экстренка» → «Training · Ekstrenka» */
+  function translateTitle() {
+    var parts = String(document.title).split("·");
+    var out = parts.map(function (part) {
+      var text = part.trim();
+      if (!text) return "";
+      var result = translateLine(text);
+      return result !== null ? result : text;
+    }).filter(Boolean);
+    if (out.length) document.title = out.join(" · ");
+  }
+
   window.I18N = {
     dict: DICT,
     translate: translateString,
@@ -580,6 +675,7 @@
       document.documentElement.lang = lang;
       if (lang === "en") {
         translateTree(document.body);
+        translateTitle();
         startObserver();
       } else {
         if (observer) { observer.disconnect(); observer = null; }

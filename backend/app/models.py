@@ -65,6 +65,22 @@ class User(Base):
         return self.role == Role.teacher.value
 
 
+class VideoQuizResult(Base):
+    """Прохождение видеотеста: проверка знания алгоритма станции по фрагментам записи."""
+
+    __tablename__ = "video_quiz_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    percent: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    details: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON: ответы и разбор
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True, nullable=False)
+
+    user: Mapped["User"] = relationship()
+
+
 class Log(Base):
     __tablename__ = "logs"
 

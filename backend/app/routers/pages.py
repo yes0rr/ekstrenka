@@ -198,6 +198,17 @@ def student_attempt_result(attempt_id: int, request: Request, db: Session = Depe
     return render(request, "student_result.html", user, attempt=attempt, loads=loads)
 
 
+# ----------------------------- видеотест -----------------------------
+@router.get("/student/video-quiz")
+def video_quiz_page(request: Request, user: User | None = Depends(get_current_user)):
+    """Видеотест: знание алгоритма станции по фрагментам записи (backend/app/videoquiz.py)."""
+    if (redirect := _guard(user)) is not None:
+        return redirect
+    if user.role != Role.student.value:
+        return RedirectResponse("/", status_code=303)
+    return render(request, "video_quiz.html", user)
+
+
 # ----------------------------- инструкция по экстренной помощи -----------------------------
 @router.get("/instruction/emergency-help")
 def emergency_help_instruction(request: Request, user: User | None = Depends(get_current_user)):

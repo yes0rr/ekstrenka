@@ -12,7 +12,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .config import FRONTEND_DIR, settings
 from .db import init_db
 from .deps import render
-from .routers import api, auth, pages, vision
+from .routers import api, auth, pages, videoquiz, vision
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
@@ -38,10 +38,12 @@ app = FastAPI(title=settings.app_name, lifespan=lifespan)
 app.mount("/static/css", StaticFiles(directory=str(FRONTEND_DIR / "css")), name="css")
 app.mount("/static/js", StaticFiles(directory=str(FRONTEND_DIR / "js")), name="js")
 app.mount("/static/img", StaticFiles(directory=str(FRONTEND_DIR / "img")), name="img")
+app.mount("/static/media", StaticFiles(directory=str(FRONTEND_DIR / "media")), name="media")
 
 app.include_router(auth.router)
 app.include_router(api.router)
 app.include_router(vision.router)
+app.include_router(videoquiz.router)
 app.include_router(pages.router)
 
 

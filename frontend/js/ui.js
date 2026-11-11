@@ -69,6 +69,8 @@
     }
     relabel();
     markActive(lang);
+    // страницы, которым нужен серверный текст (видеотест), перезапрашивают данные
+    document.dispatchEvent(new CustomEvent("ekstrenka:lang", { detail: { lang: lang } }));
   }
 
   // перерисовать подписи виджета под текущий язык
