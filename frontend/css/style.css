@@ -527,7 +527,14 @@ html[data-theme="light"][data-accent="graphite"] { --accent: #4b5566; --accent-2
 /* ---------- видеотест: вопросы по фрагментам станции ---------- */
 .quiz-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
 .quiz-main { display: flex; flex-direction: column; gap: 14px; }
-.quiz-side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 16px; }
+.quiz-side {
+  display: flex; flex-direction: column; gap: 14px;
+  position: sticky; top: 68px;
+  max-height: calc(100vh - 84px);
+  overflow-y: auto; overscroll-behavior: contain;
+  padding-right: 4px;
+}
+.quiz-history { max-height: 320px; overflow-y: auto; }
 .quiz-list { display: flex; flex-direction: column; gap: 14px; }
 .quiz-card { display: flex; flex-direction: column; gap: 10px; }
 .quiz-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
@@ -597,3 +604,39 @@ html[data-theme="light"][data-accent="graphite"] { --accent: #4b5566; --accent-2
 }
 .quiz-voice-status { flex: 1 1 220px; min-height: 16px; }
 .quiz-voice-hint { margin-top: 6px; }
+
+/* каталог разделов: карточка с картинкой и описанием (как в поиске видео) */
+.quiz-catalog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.quiz-tile {
+  display: flex; gap: 12px; align-items: stretch; text-align: left; cursor: pointer;
+  background: var(--panel, #161a22); border: 1px solid var(--border); border-radius: 12px;
+  padding: 10px; color: var(--text); font: inherit; transition: border-color .15s ease, transform .15s ease;
+}
+.quiz-tile:hover { border-color: var(--accent, #4d8dff); transform: translateY(-1px); }
+.quiz-tile-cover { position: relative; flex: 0 0 132px; }
+.quiz-tile-cover img {
+  width: 132px; height: 84px; object-fit: cover; border-radius: 8px; display: block;
+  border: 1px solid var(--border);
+}
+.quiz-tile-badge {
+  position: absolute; left: 4px; bottom: 4px; font-size: 10.5px; line-height: 1;
+  padding: 3px 5px; border-radius: 5px; background: rgba(0, 0, 0, .68); color: #fff;
+}
+.quiz-tile-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.quiz-tile-title { font-weight: 600; font-size: 14px; }
+.quiz-tile-desc { line-height: 1.35; }
+.quiz-tile-start { font-size: 12.5px; color: var(--accent, #4d8dff); margin-top: auto; }
+@media (max-width: 1180px) { .quiz-catalog { grid-template-columns: 1fr; } }
+
+/* зачёт: свободный ввод ответа */
+.quiz-free { display: flex; gap: 8px; flex-wrap: wrap; }
+.quiz-free-input {
+  flex: 1 1 260px; padding: 9px 12px; border-radius: 9px; border: 1px solid var(--border);
+  background: transparent; color: var(--text); font: inherit; font-size: 14px;
+}
+.quiz-free-input:focus { outline: none; border-color: var(--accent, #4d8dff); }
+
+/* вердикт со ссылкой на инструкцию */
+.quiz-verdict-link { color: var(--accent, #4d8dff); text-decoration: underline; }
+.quiz-history-left { display: flex; flex-direction: column; gap: 1px; }
+.quiz-history-mode { font-size: 11px; color: var(--muted); }

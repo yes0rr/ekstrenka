@@ -65,18 +65,29 @@ class User(Base):
         return self.role == Role.teacher.value
 
 
-class VideoQuizResult(Base):
-    """Прохождение видеотеста: проверка знания алгоритма станции по фрагментам записи."""
+class VideoQuizRun(Base):
+    """Один заход в видеотест.
 
-    __tablename__ = "video_quiz_results"
+    Строка создаётся при старте (какие вопросы достались, в каком порядке),
+    поэтому результат записывается один раз — при завершении. Повторное нажатие
+    «завершить» возвращает уже сохранённый результат, а не пишет новый.
+    """
+
+    __tablename__ = "video_quiz_runs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    section: Mapped[str] = mapped_column(String(30), default="all", nullable=False)
+    mode: Mapped[str] = mapped_column(String(20), default="training", nullable=False)
+    lang: Mapped[str] = mapped_column(String(5), default="ru", nullable=False)
+    question_ids: Mapped[str] = mapped_column(Text, nullable=False)     # JSON: [10, 3, 7, ...]
+    option_orders: Mapped[str] = mapped_column(Text, nullable=False)    # JSON: {"10": [2, 0, 1, 3]}
+    answers: Mapped[str] = mapped_column(Text, default="{}", nullable=False)  # JSON: {"10": {...}}
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    percent: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
-    details: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON: ответы и разбор
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True, nullable=False)
+    percent: Mapped[float | None] = mapped_column(Float, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True, nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
 
     user: Mapped["User"] = relationship()
 

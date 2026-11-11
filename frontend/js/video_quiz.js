@@ -1,17 +1,19 @@
-/* Видеотест: вопросы по фрагментам станции ЭМП + голосовой ответ.
+/* Видеотест: разделы → заход → ответы → итог.
  *
- * Правильные ответы живут только на сервере: браузер присылает номер варианта,
- * вердикт (в режиме обучения) и разбор (в конце) приходят ответом API.
- *
- * Голос: распознаёт браузер (Web Speech API, Chrome и Edge), на сервер уходит только текст;
- * сервер сопоставляет фразу с вариантами и возвращает номер — запись никуда не сохраняется.
+ * Правила, которые здесь важны:
+ *  1) один заход = одна запись в истории. Итог сохраняет сервер по run_id,
+ *     повторное нажатие «завершить» возвращает уже сохранённый результат;
+ *  2) «обучение» — варианты ответа и вердикт сразу; «зачёт» — вариантов нет,
+ *     ответ вводится текстом или голосом, вердикт только в конце;
+ *  3) голос распознаёт браузер (Chrome/Edge), на сервер уходит только текст.
  */
 
 (function () {
-  var state = { questions: [], answers: {}, checked: {}, mode: 'training', voiceBusy: false };
+  var state = { sections: [], run: null, answers: {}, mode: 'training', finished: false, voiceBusy: false };
 
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   var voiceSupported = Boolean(SR);
+  var secure = window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 
   function el(tag, cls, text) {
     var node = document.createElement(tag);
@@ -26,7 +28,6 @@
     return stored === 'en' ? 'en' : 'ru';
   }
 
-  /* подпись интерфейса: русский текст, английский — из словаря i18n */
   function t(text) {
     if (lang() === 'en' && window.I18N) return window.I18N.translate(text) || text;
     return text;
@@ -50,14 +51,79 @@
     });
   }
 
-  /* ---------------------------- отрисовка ---------------------------- */
+  /* ---------------------------- каталог разделов ---------------------------- */
+
+  function renderCatalog() {
+    const catalog = document.getElementById('catalog');
+    catalog.innerHTML = '';
+    state.sections.forEach(function (section) {
+      const card = el('button', 'quiz-tile');
+      card.type = 'button';
+
+      const cover = el('div', 'quiz-tile-cover');
+      const img = document.createElement('img');
+      img.src = '/static/media/quiz/' + section.cover + '.jpg';
+      img.alt = '';
+      img.loading = 'lazy';
+      cover.appendChild(img);
+      const badge = el('span', 'quiz-tile-badge',
+        t(section.run_size === section.total
+          ? section.total + ' вопросов'
+          : section.run_size + ' из ' + section.total));
+      cover.appendChild(badge);
+      card.appendChild(cover);
+
+      const body = el('div', 'quiz-tile-body');
+      body.appendChild(el('div', 'quiz-tile-title', section.title));
+      body.appendChild(el('div', 'quiz-tile-desc muted small', section.description));
+      const start = el('span', 'quiz-tile-start', state.mode === 'training' ? t('Начать обучение') : t('Начать зачёт'));
+      body.appendChild(start);
+      card.appendChild(body);
+
+      card.addEventListener('click', function () { startRun(section.key); });
+      catalog.appendChild(card);
+    });
+  }
+
+  /* ---------------------------- заход ---------------------------- */
+
+  async function startRun(sectionKey) {
+    try {
+      const data = await post('/api/video-quiz/start',
+        { section: sectionKey, mode: state.mode, lang: lang() });
+      state.run = data;
+      state.answers = {};
+      state.finished = false;
+      document.getElementById('catalog').hidden = true;
+      document.getElementById('runArea').hidden = false;
+      document.getElementById('resultPanel').hidden = true;
+      const section = state.sections.find(function (s) { return s.key === sectionKey; });
+      document.getElementById('runTitle').textContent =
+        (section ? section.title : '') + ' · ' +
+        (data.mode === 'training' ? t('обучение') : t('зачёт'));
+      document.getElementById('keyHint').hidden = data.mode === 'testing';
+      document.getElementById('finishBtn').disabled = false;
+      document.getElementById('finishBtn').textContent = t('Завершить и увидеть разбор');
+      renderQuestions();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  function renderQuestions() {
+    const list = document.getElementById('quizList');
+    list.innerHTML = '';
+    state.run.items.forEach(function (q, index) { list.appendChild(renderQuestion(q, index)); });
+    updateProgress();
+  }
 
   function renderQuestion(q, index) {
     const card = el('div', 'panel quiz-card');
     card.dataset.id = q.id;
 
     const head = el('div', 'quiz-head');
-    head.appendChild(el('span', 'quiz-num', t('Фрагмент ' + (index + 1) + ' из ' + state.questions.length)));
+    head.appendChild(el('span', 'quiz-num', t('Вопрос ' + (index + 1) + ' из ' + state.run.total)));
     head.appendChild(el('span', 'quiz-title', q.title));
     card.appendChild(head);
 
@@ -73,29 +139,49 @@
 
     card.appendChild(el('p', 'quiz-question', q.question));
 
-    const options = el('div', 'quiz-options');
-    q.options.forEach(function (text, i) {
-      const label = el('label', 'option quiz-option');
-      const radio = document.createElement('input');
-      radio.type = 'radio';
-      radio.name = 'q' + q.id;
-      radio.value = String(i);
-      radio.addEventListener('change', function () { onChoose(q, i, card); });
-      label.appendChild(radio);
-      label.appendChild(el('span', 'opt-key', String(i + 1)));
-      label.appendChild(el('span', '', text));
-      options.appendChild(label);
-    });
-    card.appendChild(options);
+    if (state.run.mode === 'training') {
+      const options = el('div', 'quiz-options');
+      q.options.forEach(function (text, i) {
+        const label = el('label', 'option quiz-option');
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'q' + q.id;
+        radio.value = String(i);
+        radio.addEventListener('change', function () { sendAnswer(q, card, { answer: i }); });
+        label.appendChild(radio);
+        label.appendChild(el('span', 'opt-key', String(i + 1)));
+        label.appendChild(el('span', '', text));
+        options.appendChild(label);
+      });
+      card.appendChild(options);
+    } else {
+      const box = el('div', 'quiz-free');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'quiz-free-input';
+      input.placeholder = t('Ваш ответ словами, например «тридцать на два»');
+      input.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        sendAnswer(q, card, { text: input.value.trim() });
+      });
+      box.appendChild(input);
+      const send = el('button', 'btn small', t('Ответить'));
+      send.type = 'button';
+      send.addEventListener('click', function () { sendAnswer(q, card, { text: input.value.trim() }); });
+      box.appendChild(send);
+      card.appendChild(box);
+    }
 
-    if (voiceSupported) card.appendChild(renderVoice(q, card));
+    if (voiceSupported && secure) card.appendChild(renderVoice(q, card));
 
     const feedback = el('div', 'quiz-feedback');
     feedback.hidden = true;
     card.appendChild(feedback);
-
     return card;
   }
+
+  /* ---------------------------- голос ---------------------------- */
 
   function renderVoice(q, card) {
     const box = el('div', 'quiz-voice');
@@ -106,7 +192,13 @@
     const status = el('div', 'quiz-voice-status muted small');
 
     button.addEventListener('click', function () {
-      if (state.voiceBusy) return;
+      if (state.voiceBusy) {
+        // второй клик по кнопке — «Стоп»: отправляем то, что успели услышать
+        if (state.recognition) {
+          try { state.recognition.stop(); } catch (e) {}
+        }
+        return;
+      }
       listen(q, card, button, status);
     });
 
@@ -117,22 +209,48 @@
 
   function setListening(button, on) {
     button.classList.toggle('is-listening', on);
-    button.querySelector('span:last-child').textContent = on ? t('Слушаю…') : t('Ответить голосом');
+    button.querySelector('span:last-child').textContent = on ? t('Слушаю… (Стоп)') : t('Ответить голосом');
   }
 
-  function listen(q, card, button, status) {
+  /* Слушаем до результата. Если браузер закрыл распознавание без текста —
+     пробуем ещё раз (не больше двух), и только потом просим повторить.
+     Раньше сообщение «не разобрал» появлялось мгновенно, до первой фразы. */
+  function listen(q, card, button, status, attempt) {
+    attempt = attempt || 1;
     const recognition = new SR();
     recognition.lang = lang() === 'en' ? 'en-US' : 'ru-RU';
     recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
     recognition.continuous = false;
+    recognition.maxAlternatives = 1;
 
     state.voiceBusy = true;
+    state.recognition = recognition;
     setListening(button, true);
-    status.textContent = t('Слушаю…');
+    status.textContent = t('Слушаю… скажите ответ');
 
     var finalText = '';
-    var stopped = false;
+    var finished = false;
+
+    function finish(showError) {
+      if (finished) return;
+      finished = true;
+      state.voiceBusy = false;
+      state.recognition = null;
+      setListening(button, false);
+      const text = finalText.trim();
+      if (text) {
+        sendAnswer(q, card, { text: text }, status);
+        return;
+      }
+      if (attempt < 2) {
+        status.textContent = t('Слушаю… скажите ответ');
+        setTimeout(function () { listen(q, card, button, status, attempt + 1); }, 250);
+        return;
+      }
+      if (showError) {
+        status.textContent = t('Не разобрал ответ — попробуйте ещё раз или выберите вариант вручную.');
+      }
+    }
 
     recognition.onresult = function (event) {
       var interim = '';
@@ -145,25 +263,23 @@
     };
 
     recognition.onerror = function (event) {
-      stopped = true;
-      state.voiceBusy = false;
-      setListening(button, false);
-      status.textContent = event.error === 'not-allowed'
-        ? t('Микрофон недоступен. Разрешите доступ к микрофону в настройках браузера.')
-        : t('Не разобрал ответ — попробуйте ещё раз или выберите вариант вручную.');
-    };
-
-    recognition.onend = function () {
-      setListening(button, false);
-      state.voiceBusy = false;
-      if (stopped) return;
-      var text = finalText.trim();
-      if (!text) {
-        status.textContent = t('Не разобрал ответ — попробуйте ещё раз или выберите вариант вручную.');
+      var code = event.error;
+      if (code === 'not-allowed' || code === 'service-not-allowed') {
+        finished = true;
+        state.voiceBusy = false;
+        setListening(button, false);
+        status.textContent = t('Микрофон недоступен. Разрешите доступ к микрофону в настройках браузера.');
         return;
       }
-      sendVoice(q, card, text, status);
+      if (code === 'no-speech' || code === 'aborted') {
+        finish(true);
+        return;
+      }
+      finish(true);
     };
+
+    // распознавание закрылось: если текст есть — отправляем, если нет — одна повторная попытка
+    recognition.onend = function () { finish(true); };
 
     try {
       recognition.start();
@@ -174,35 +290,50 @@
     }
   }
 
-  async function sendVoice(q, card, transcript, status) {
-    status.textContent = t('Услышано:') + ' ' + transcript;
+  /* ---------------------------- ответы ---------------------------- */
+
+  async function sendAnswer(q, card, payload, status) {
+    if (!state.run || state.finished) return;
     try {
-      const result = await post('/api/video-quiz/voice',
-        { question_id: q.id, transcript: transcript, lang: lang() });
-      if (result.chosen === null || result.chosen === undefined) {
-        status.textContent = t('Услышано:') + ' ' + transcript + ' · ' +
-          t('Не разобрал ответ — попробуйте ещё раз или выберите вариант вручную.');
-        return;
+      const data = await post('/api/video-quiz/answer',
+        Object.assign({ run_id: state.run.run_id, question_id: q.id }, payload));
+      state.answers[q.id] = true;
+      updateProgress();
+      if (status) {
+        if (data.accepted) {
+          status.textContent = t('Ответ принят — вердикт будет в конце');
+        } else if (data.recognised === false) {
+          status.textContent = t('Услышано:') + ' ' + (payload.text || '') + ' · ' +
+            t('не похоже ни на один из вариантов ответа');
+        } else {
+          status.textContent = t('Услышано:') + ' ' + (payload.text || '') + ' · ' +
+            (data.correct ? t('Верно') : t('Неверно'));
+        }
       }
-      const label = card.querySelectorAll('.quiz-option')[result.chosen];
-      if (label) {
-        label.querySelector('input').checked = true;
-        label.querySelector('input').dispatchEvent(new Event('change'));
-      }
-      status.textContent = t('Услышано:') + ' ' + transcript + ' · ' +
-        t('Понял как вариант') + ' ' + (result.chosen + 1) +
-        (result.confidence ? ' (' + t('уверенность') + ' ' + Math.round(result.confidence * 100) + ' %)' : '');
+      if (data.accepted) showPending(card);
+      else showVerdict(card, data);
     } catch (error) {
-      status.textContent = 'Не удалось проверить голосовой ответ: ' + error.message;
+      const feedback = card.querySelector('.quiz-feedback');
+      feedback.hidden = false;
+      feedback.textContent = error.message;
     }
   }
 
-  function showFeedback(card, data) {
+  function showPending(card) {
     const feedback = card.querySelector('.quiz-feedback');
     feedback.hidden = false;
     feedback.innerHTML = '';
-    if (data.accepted) {
-      feedback.appendChild(el('div', 'quiz-verdict pending', t('Ответ принят — вердикт будет в конце')));
+    feedback.appendChild(el('div', 'quiz-verdict pending', t('Ответ принят — вердикт будет в конце')));
+  }
+
+  function showVerdict(card, data) {
+    const feedback = card.querySelector('.quiz-feedback');
+    feedback.hidden = false;
+    feedback.innerHTML = '';
+    if (data.recognised === false) {
+      /* фраза или текст не сопоставились ни с одним вариантом — честно говорим об этом */
+      feedback.appendChild(el('div', 'quiz-verdict pending',
+        t('Не разобрал ответ — попробуйте ещё раз или выберите вариант вручную.')));
       return;
     }
     card.classList.toggle('is-correct', data.correct);
@@ -216,54 +347,44 @@
     });
   }
 
-  /* ---------------------------- действия ---------------------------- */
-
-  async function onChoose(q, index, card) {
-    state.answers[q.id] = index;
-    updateProgress();
-    try {
-      const data = await post('/api/video-quiz/answer',
-        { question_id: q.id, answer: index, mode: state.mode, lang: lang() });
-      state.checked[q.id] = data.accepted ? null : data.correct;
-      showFeedback(card, data);
-      updateProgress();
-    } catch (error) {
-      const feedback = card.querySelector('.quiz-feedback');
-      feedback.hidden = false;
-      feedback.textContent = 'Не удалось проверить ответ: ' + error.message;
-    }
-  }
-
   function updateProgress() {
+    if (!state.run) return;
     const answered = Object.keys(state.answers).length;
-    const total = state.questions.length || 9;
     document.getElementById('answeredCount').textContent = answered;
-    document.getElementById('totalCount').textContent = total;
-    document.getElementById('progressFill').style.width = Math.round(answered * 100 / total) + '%';
-    document.getElementById('finishBtn').disabled = answered === 0;
+    document.getElementById('totalCount').textContent = state.run.total;
+    document.getElementById('progressFill').style.width =
+      Math.round(answered * 100 / state.run.total) + '%';
+    document.getElementById('finishBtn').disabled = answered === 0 || state.finished;
   }
+
+  /* ---------------------------- итог ---------------------------- */
 
   async function finishQuiz() {
+    if (!state.run || state.finished) return;
     const btn = document.getElementById('finishBtn');
     btn.disabled = true;
     btn.textContent = t('Считаем…');
     try {
-      const result = await post('/api/video-quiz/finish',
-        { answers: state.answers, mode: state.mode, lang: lang() });
+      const result = await post('/api/video-quiz/finish', { run_id: state.run.run_id });
+      state.finished = true;
       showResult(result);
       loadHistory();
+      btn.textContent = t('Результат сохранён');
+      btn.disabled = true;
     } catch (error) {
       alert(error.message);
-    } finally {
       btn.textContent = t('Завершить и увидеть разбор');
       btn.disabled = false;
     }
   }
 
   function showResult(result) {
-    document.getElementById('resultPanel').hidden = false;
+    const panel = document.getElementById('resultPanel');
+    panel.hidden = false;
     document.getElementById('scorePercent').textContent = result.percent;
-    document.getElementById('scoreVerdict').textContent = result.verdict_text;
+    const verdictBox = document.getElementById('scoreVerdict');
+    verdictBox.innerHTML = '';
+    appendVerdict(verdictBox, result.verdict_text);
     document.getElementById('scoreDetail').textContent =
       t('Верных ответов: ' + result.score + ' из ' + result.total);
 
@@ -278,6 +399,7 @@
         : (item.correct ? t('Верно')
           : t('Неверно — правильный вариант:') + ' ' + (item.correct_index + 1));
       feedback.appendChild(el('div', 'quiz-verdict ' + (item.correct ? 'ok' : 'bad'), verdictText));
+      if (item.text) feedback.appendChild(el('div', 'quiz-source', t('Ваш ответ:') + ' ' + item.text));
       feedback.appendChild(el('div', 'quiz-explain', item.explain));
       feedback.appendChild(el('div', 'quiz-source', t('Паспорт станции:') + ' ' + item.checklist));
       card.querySelectorAll('.quiz-option').forEach(function (label, i) {
@@ -285,32 +407,36 @@
         label.classList.toggle('is-chosen', i === item.chosen);
       });
     });
-    document.getElementById('resultPanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  function setMode(mode) {
-    state.mode = mode;
-    document.querySelectorAll('.seg').forEach(function (button) {
-      const on = button.dataset.mode === mode;
-      button.classList.toggle('is-on', on);
-      button.setAttribute('aria-selected', on ? 'true' : 'false');
-    });
-    document.getElementById('modeHint').textContent = mode === 'training'
-      ? t('Проверка ответа сразу')
-      : t('Зачёт: разбор в конце');
-    restart(false);
+  /* вердикт: слова «инструкция по ЭМП» превращаем в ссылку на саму инструкцию */
+  function appendVerdict(box, text) {
+    const needles = ['инструкции по ЭМП', 'инструкцией по ЭМП', 'инструкция по ЭМП',
+      'the emergency care guide', 'emergency care guide'];
+    const needle = needles.find(function (n) { return text.indexOf(n) >= 0; });
+    if (!needle) { box.textContent = text; return; }
+    const parts = text.split(needle);
+    box.appendChild(document.createTextNode(parts[0]));
+    const link = document.createElement('a');
+    link.href = '/instruction/emergency-help';
+    link.textContent = needle;
+    link.className = 'quiz-verdict-link';
+    box.appendChild(link);
+    box.appendChild(document.createTextNode(parts.slice(1).join(needle)));
   }
 
-  function restart(scroll) {
+  function backToCatalog() {
+    state.run = null;
+    state.finished = false;
     state.answers = {};
-    state.checked = {};
-    document.getElementById('resultPanel').hidden = true;
-    const list = document.getElementById('quizList');
-    list.innerHTML = '';
-    state.questions.forEach(function (q, i) { list.appendChild(renderQuestion(q, i)); });
-    updateProgress();
-    if (scroll) window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.getElementById('runArea').hidden = true;
+    document.getElementById('catalog').hidden = false;
+    renderCatalog();
+    loadHistory();
   }
+
+  /* ---------------------------- история ---------------------------- */
 
   async function loadHistory() {
     try {
@@ -321,39 +447,58 @@
       list.innerHTML = '';
       data.items.forEach(function (row) {
         const line = el('div', 'quiz-history-row');
-        const when = row.created_at ? new Date(row.created_at).toLocaleString(lang() === 'en' ? 'en-GB' : 'ru-RU') : '';
-        line.appendChild(el('span', '', when));
+        const left = el('div', 'quiz-history-left');
+        const when = row.finished_at
+          ? new Date(row.finished_at).toLocaleString(lang() === 'en' ? 'en-GB' : 'ru-RU',
+            { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+          : '';
+        left.appendChild(el('span', '', when));
+        left.appendChild(el('span', 'quiz-history-mode', (row.mode === 'testing' ? t('зачёт') : t('обучение'))));
+        line.appendChild(left);
         line.appendChild(el('b', '', row.percent + ' %'));
         list.appendChild(line);
       });
       panel.hidden = false;
-    } catch (e) { /* история не критична для прохождения */ }
+    } catch (e) { /* история не критична */ }
   }
 
-  async function start() {
-    const list = document.getElementById('quizList');
+  async function loadSections() {
+    const catalog = document.getElementById('catalog');
     try {
-      const data = await api('/api/video-quiz/questions?lang=' + lang());
-      state.questions = data.items;
-      restart(false);
+      const data = await api('/api/video-quiz/sections?lang=' + lang());
+      state.sections = data.items;
+      catalog.hidden = false;
+      renderCatalog();
       loadHistory();
     } catch (error) {
-      list.innerHTML = '<div class="alert error">Не удалось загрузить вопросы: ' + error.message + '</div>';
+      catalog.innerHTML = '<div class="alert error">Не удалось загрузить разделы: ' + error.message + '</div>';
     }
+  }
+
+  function applyMode(mode) {
+    state.mode = mode;
+    document.querySelectorAll('.seg').forEach(function (button) {
+      const on = button.dataset.mode === mode;
+      button.classList.toggle('is-on', on);
+      button.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    if (!state.run) renderCatalog();
   }
 
   /* ---------------------------- клавиатура ---------------------------- */
 
   function bindKeys() {
     document.addEventListener('keydown', function (event) {
+      if (!state.run || state.finished) return;
       if (event.target.matches('input, textarea, select, button')) return;
       if (event.key === 'Enter' && !document.getElementById('finishBtn').disabled) {
         finishQuiz();
         return;
       }
+      if (state.run.mode !== 'training') return;
       const num = parseInt(event.key, 10);
       if (!(num >= 1 && num <= 4)) return;
-      const next = state.questions.find(function (q) { return state.answers[q.id] === undefined; });
+      const next = state.run.items.find(function (q) { return !state.answers[q.id]; });
       if (!next) return;
       const card = document.querySelector('.quiz-card[data-id="' + next.id + '"]');
       const label = card && card.querySelectorAll('.quiz-option')[num - 1];
@@ -366,17 +511,21 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('finishBtn').addEventListener('click', finishQuiz);
-    document.getElementById('restartBtn').addEventListener('click', function () { restart(true); });
+    document.getElementById('backBtn').addEventListener('click', backToCatalog);
+    document.getElementById('restartBtn').addEventListener('click', backToCatalog);
     document.querySelectorAll('.seg').forEach(function (button) {
-      button.addEventListener('click', function () { setMode(button.dataset.mode); });
+      button.addEventListener('click', function () { applyMode(button.dataset.mode); });
     });
-    if (!voiceSupported) {
+    if (!voiceSupported || !secure) {
       const hint = document.getElementById('voiceHint');
-      if (hint) hint.textContent = t('В этом браузере голосовой ответ недоступен — работает в Chrome и Edge. Выберите вариант вручную.');
+      if (hint) {
+        hint.textContent = !secure
+          ? t('Голосовой ответ работает только по https — на этом адресе он недоступен. Введите ответ текстом.')
+          : t('В этом браузере голосовой ответ недоступен — работает в Chrome и Edge. Введите ответ текстом.');
+      }
     }
-    // смена языка: серверные тексты (вопросы, варианты) перезапрашиваем
-    document.addEventListener('ekstrenka:lang', function () { start(); });
+    document.addEventListener('ekstrenka:lang', function () { backToCatalog(); loadSections(); });
     bindKeys();
-    start();
+    loadSections();
   });
 })();

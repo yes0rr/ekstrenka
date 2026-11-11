@@ -5,7 +5,7 @@
 <section class="page-head">
   <div>
     <h1>Видеотест: алгоритм станции ЭМП</h1>
-    <p class="muted">Девять коротких фрагментов реального прохождения станции «Экстренная медицинская помощь». В каждом — один вопрос о том, что делает врач и что должно быть дальше.</p>
+    <p class="muted">Короткие фрагменты реального прохождения станции «Экстренная медицинская помощь». Выберите раздел — вопросы каждый раз новые и идут в случайном порядке.</p>
   </div>
   <div class="page-actions">
     <a class="btn ghost" href="/instruction/emergency-help">Инструкция по ЭМП</a>
@@ -15,35 +15,42 @@
 <div class="quiz-layout">
   <div class="quiz-main">
 
+    <!-- выбор режима: применяется к следующему заходу -->
     <div class="panel quiz-modes" id="modePanel">
       <div class="segmented" role="tablist" aria-label="Режим прохождения">
         <button type="button" class="seg is-on" data-mode="training" role="tab" aria-selected="true">
           Обучение
-          <span>вердикт сразу после ответа</span>
+          <span>варианты и вердикт сразу после ответа</span>
         </button>
         <button type="button" class="seg" data-mode="testing" role="tab" aria-selected="false">
           Зачёт
-          <span>вердикт и разбор — в конце</span>
+          <span>вариантов нет — ответ вводите или проговариваете сами</span>
         </button>
       </div>
     </div>
 
-    <div class="panel quiz-bar">
-      <div class="quiz-progressbar"><i id="progressFill"></i></div>
-      <div class="quiz-bar-row">
-        <span class="muted small">Отвечено <b><span id="answeredCount">0</span>/<span id="totalCount">9</span></b></span>
-        <span class="muted small" id="modeHint">Проверка ответа сразу</span>
-        <button class="btn" id="finishBtn" type="button" disabled>Завершить и увидеть разбор</button>
+    <!-- каталог разделов -->
+    <div id="catalog" class="quiz-catalog"></div>
+
+    <!-- сам заход -->
+    <div id="runArea" hidden>
+      <div class="panel quiz-bar">
+        <div class="quiz-progressbar"><i id="progressFill"></i></div>
+        <div class="quiz-bar-row">
+          <span class="muted small" id="runTitle">Заход</span>
+          <span class="muted small">Отвечено <b><span id="answeredCount">0</span>/<span id="totalCount">0</span></b></span>
+          <button class="btn" id="finishBtn" type="button" disabled>Завершить и увидеть разбор</button>
+          <button class="btn ghost small" id="backBtn" type="button">К разделам</button>
+        </div>
       </div>
-    </div>
 
-    <div id="quizList" class="quiz-list"></div>
+      <div id="quizList" class="quiz-list"></div>
 
-    <div class="alert info quiz-hint">
-      <div>Видео без звука — это нарезка из записи станции; нижняя плашка с пунктами оценочного листа срезана, чтобы не подсказывать.</div>
-      <div>Клавиши 1–4 выбирают вариант, Enter отправляет итог.</div>
-      <div class="quiz-voice-hint" id="voiceHint">Голосовой ответ: скажите, что делает врач, например «пульсоксиметрия» или «тридцать на два».</div>
-      <div class="quiz-voice-hint">Голос распознаётся браузером и никуда не записывается — на сервер уходит только текст.</div>
+      <div class="alert info quiz-hint">
+        <div>Видео без звука — это нарезка из записи станции; нижняя плашка с пунктами оценочного листа срезана, чтобы не подсказывать.</div>
+        <div id="keyHint">Клавиши 1–4 выбирают вариант, Enter отправляет итог.</div>
+        <div class="quiz-voice-hint" id="voiceHint">Голос распознаётся браузером и никуда не записывается — на сервер уходит только текст.</div>
+      </div>
     </div>
   </div>
 
@@ -51,7 +58,6 @@
     <div class="panel">
       <h3 style="margin-top:0">Зачем это</h3>
       <p class="muted small">Видеотест проверяет знание последовательности действий по паспорту станции: оценка сознания и дыхания, вызов СМП, АНД, разряд, вентиляция 30:2.</p>
-      <p class="muted small">То, что камера увидеть не может, закрывается вопросами — а не выдуманными критериями.</p>
       <p class="muted small" style="margin-bottom:0">Основание: паспорт экзаменационной станции «Экстренная медицинская помощь», алгоритм и оценочный лист (50 пунктов).</p>
     </div>
 
@@ -60,17 +66,17 @@
       <div class="quiz-score"><span id="scorePercent">0</span> %</div>
       <div class="muted" id="scoreVerdict">—</div>
       <div class="muted small" style="margin-top:6px"><span id="scoreDetail"></span></div>
-      <button class="btn ghost small" id="restartBtn" type="button" style="margin-top:10px">Пройти заново</button>
+      <button class="btn ghost small" id="restartBtn" type="button" style="margin-top:10px">Пройти ещё раз</button>
     </div>
 
     <div class="panel" id="historyPanel" hidden>
       <h3 style="margin-top:0">Прошлые прохождения</h3>
-      <div id="historyList" class="muted small"></div>
+      <div id="historyList" class="muted small quiz-history"></div>
     </div>
   </aside>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/video_quiz.js"></script>
+<script src="/static/js/video_quiz.js?v=20"></script>
 {% endblock %}

@@ -53,6 +53,8 @@
       "Source: the passport of the examination station “Emergency Medical Care”, the algorithm and the 50-item checklist.",
     "Ответить голосом": "Answer by voice",
     "Слушаю…": "Listening…",
+    "Слушаю… (Стоп)": "Listening… (Stop)",
+    "не похоже ни на один из вариантов ответа": "not close to any of the answer options",
     "Стоп": "Stop",
     "Сказать ещё раз": "Say it again",
     "Не разобрал ответ — попробуйте ещё раз или выберите вариант вручную.":
@@ -188,12 +190,39 @@
     "Вопросы": "Questions",
     "Начислено:": "Awarded:",
 
+    "Начать обучение": "Start training",
+    "Начать зачёт": "Start the exam",
+    "К разделам": "Back to sections",
+    "Все разделы": "All sections",
+    "Ваш ответ словами, например «тридцать на два»": "Type your answer, e.g. “thirty to two”",
+    "Ответить": "Answer",
+    "Ваш ответ:": "Your answer:",
+    "Результат сохранён": "Result saved",
+    "Пройти ещё раз": "Try again",
+    "Слушаю… скажите ответ": "Listening… say your answer",
+    "Голосовой ответ работает только по https — на этом адресе он недоступен. Введите ответ текстом.":
+      "Voice answers require https and are unavailable at this address. Type your answer instead.",
+    "В этом браузере голосовой ответ недоступен — работает в Chrome и Edge. Введите ответ текстом.":
+      "Voice answers are not available in this browser (Chrome and Edge only). Type your answer instead.",
+    "варианты и вердикт сразу после ответа": "options and a verdict right after the answer",
+    "вариантов нет — ответ вводите или проговариваете сами": "no options — type or say the answer yourself",
+    "обучение": "training",
+    "зачёт": "exam",
+    "Вопрос ": "Question ",
+
+    "Короткие фрагменты реального прохождения станции «Экстренная медицинская помощь». Выберите раздел — вопросы каждый раз новые и идут в случайном порядке.":
+      "Short clips from a real run of the Emergency Medical Care station. Pick a section — questions are new and shuffled every time.",
+    "Заход": "Run",
+
     // фразы с числами
     __patterns: [
       ["^Фрагмент (\\d+) из (\\d+)$", "Clip $1 of $2"],
       ["^Фрагмент (\\d+)$", "Clip $1"],
       ["^Верных ответов: (\\d+) из (\\d+)$", "Correct answers: $1 of $2"],
       ["^Режим (обучения — с разбором ответов|тестирования — без подсказок) · (.+)$", "Mode: $1 · $2"],
+      ["^Вопрос (\\d+) из (\\d+)$", "Question $1 of $2"],
+      ["^(\\d+) из (\\d+)$", "$1 of $2"],
+      ["^(\\d+) вопросов$", "$1 questions"],
       ["^максимум (\\d+) баллов$", "maximum $1 points"]
     ]
   };

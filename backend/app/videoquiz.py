@@ -471,9 +471,618 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
             ),
         },
     ),
+    VideoQuestion(
+        id=10,
+        clip="02_ekg",
+        title={
+            "ru": "Плёнка ЭКГ снята, врач смотрит на запись",
+            "en": "The ECG is recorded, the doctor looks at the trace",
+        },
+        question={
+            "ru": "Что обязательно сделать сразу после записи ЭКГ?",
+            "en": "What must be done right after recording the ECG?",
+        },
+        options={
+            "ru": (
+                "Интерпретировать запись: ритм, ишемия, признаки ТЭЛА",
+                "Подшить плёнку в карту и продолжить осмотр",
+                "Переснять ЭКГ три раза подряд",
+                "Ничего, интерпретация не входит в чек-лист",
+            ),
+            "en": (
+                "Interpret the trace: rhythm, ischaemia, signs of pulmonary embolism",
+                "File the trace and continue the examination",
+                "Record the ECG three times in a row",
+                "Nothing — interpretation is not part of the checklist",
+            ),
+        },
+        correct=0,
+        explain={
+            "ru": "В оценочном листе ЭКГ идёт двумя пунктами: снять и истолковать. "
+                  "Запись без интерпретации — половина балла.",
+            "en": "The checklist has two items for the ECG: record and interpret. "
+                  "A trace without interpretation is half the score.",
+        },
+        checklist="п. 19",
+        triggers={
+            "ru": (
+                ("интерпрет", "истолков", "оценить запись", "прочитать экг", "ритм", "ишемия", "тэла"),
+                ("подшить", "в карту", "продолжить осмотр"),
+                ("три раза", "переснять", "повторить запись"),
+                ("ничего", "не входит"),
+            ),
+            "en": (
+                ("interpret", "read the ecg", "rhythm", "ischaemia", "pulmonary embolism"),
+                ("file", "continue the examination"),
+                ("three times", "repeat the recording"),
+                ("nothing", "not part"),
+            ),
+        },
+    ),
+    VideoQuestion(
+        id=11,
+        clip="03_call_smp",
+        title={
+            "ru": "Врач с телефоном у кушетки, помощница рядом",
+            "en": "The doctor with the phone at the couch, the assistant nearby",
+        },
+        question={
+            "ru": "Когда сообщают предполагаемый диагноз диспетчеру скорой?",
+            "en": "When is the provisional diagnosis reported to the dispatcher?",
+        },
+        options={
+            "ru": (
+                "При вызове скорой помощи, вместе с остальными данными",
+                "Только когда бригада приедет на место",
+                "Только после окончания реанимации",
+                "Диагноз диспетчеру не сообщают",
+            ),
+            "en": (
+                "When calling the ambulance, together with the other details",
+                "Only when the team arrives",
+                "Only after resuscitation is finished",
+                "The diagnosis is not reported to the dispatcher",
+            ),
+        },
+        correct=0,
+        explain={
+            "ru": "Диагноз — один из пяти элементов вызова. Без него бригада не знает, "
+                  "что везти и куда госпитализировать.",
+            "en": "The diagnosis is one of the five elements of the call. Without it the team "
+                  "does not know what to bring and where to take the patient.",
+        },
+        checklist="п. 28, 39",
+        triggers={
+            "ru": (
+                ("при вызове", "во время вызова", "сразу", "вместе"),
+                ("когда приедет", "после приезда", "бригада приедет"),
+                ("после реанимации", "после окончания"),
+                ("не сообщают", "не передают"),
+            ),
+            "en": (
+                ("when calling", "during the call", "immediately", "together"),
+                ("when the team arrives", "after arrival"),
+                ("after resuscitation",),
+                ("not reported", "do not report"),
+            ),
+        },
+    ),
+    VideoQuestion(
+        id=12,
+        clip="01_pulseox",
+        title={
+            "ru": "Врач надевает датчик и смотрит на монитор",
+            "en": "The doctor applies the probe and looks at the monitor",
+        },
+        question={
+            "ru": "Когда по алгоритму проводят кислородотерапию?",
+            "en": "When does the algorithm call for oxygen therapy?",
+        },
+        options={
+            "ru": (
+                "По показаниям — при гипоксемии, в сценариях 1–3 и 5–7",
+                "Всем пациентам без исключения",
+                "Только после первого разряда АНД",
+                "Никогда, кислород не входит в станцию",
+            ),
+            "en": (
+                "When indicated — in hypoxaemia, in scenarios 1–3 and 5–7",
+                "To every patient without exception",
+                "Only after the first AED shock",
+                "Never — oxygen is not part of the station",
+            ),
+        },
+        correct=0,
+        explain={
+            "ru": "Кислород не «на всякий случай»: в сценариях 4, 8 и 9 он не показан, "
+                  "и лишний кислород — тоже ошибка. Показание — низкая сатурация.",
+            "en": "Oxygen is not given “just in case”: in scenarios 4, 8 and 9 it is not indicated, "
+                  "and extra oxygen is also a mistake. The indication is low saturation.",
+        },
+        checklist="п. 6",
+        triggers={
+            "ru": (
+                ("по показаниям", "при гипоксемии", "при низкой сатурации", "сценариях"),
+                ("всем", "без исключения", "всем пациентам"),
+                ("после разряда", "после первого разряда"),
+                ("никогда", "не входит"),
+            ),
+            "en": (
+                ("when indicated", "hypoxaemia", "low saturation"),
+                ("every patient", "without exception"),
+                ("after the shock",),
+                ("never", "not part"),
+            ),
+        },
+    ),
+    VideoQuestion(
+        id=13,
+        clip="04_arrest",
+        title={
+            "ru": "Врач выпрямился и подаёт команду помощнице",
+            "en": "The doctor straightens up and gives the assistant an order",
+        },
+        question={
+            "ru": "За сколько секунд нужно начать компрессии грудной клетки?",
+            "en": "How many seconds are allowed before chest compressions must start?",
+        },
+        options={
+            "ru": (
+                "В течение 20 секунд после сообщения о прекращении экскурсий грудной клетки",
+                "В течение 2 минут — сначала нужно всё записать",
+                "Только после приезда скорой помощи",
+                "Сразу после того, как снята ЭКГ в 12 отведениях",
+            ),
+            "en": (
+                "Within 20 seconds of the report that chest excursions have stopped",
+                "Within 2 minutes — everything must be documented first",
+                "Only after the ambulance arrives",
+                "Right after the 12-lead ECG is recorded",
+            ),
+        },
+        correct=0,
+        explain={
+            "ru": "Двадцать секунд — это максимум по чек-листу. Каждая минута без компрессий "
+                  "снижает выживаемость примерно на 10 %.",
+            "en": "Twenty seconds is the checklist maximum. Every minute without compressions "
+                  "cuts survival by roughly 10 %.",
+        },
+        checklist="п. 38",
+        triggers={
+            "ru": (
+                ("20 секунд", "двадцать секунд", "в течение 20"),
+                ("2 минут", "две минуты", "двух минут"),
+                ("после приезда", "после скорой"),
+                ("после экг", "после снятия"),
+            ),
+            "en": (
+                ("20 seconds", "twenty seconds", "within 20"),
+                ("2 minutes", "two minutes"),
+                ("after the ambulance",),
+                ("after the ecg",),
+            ),
+        },
+    ),
+    VideoQuestion(
+        id=14,
+        clip="05_aed_on",
+        title={
+            "ru": "Электроды АНД на грудной клетке пациента",
+            "en": "AED pads on the patient's chest",
+        },
+        question={
+            "ru": "Куда наклеивают электроды АНД?",
+            "en": "Where are the AED pads applied?",
+        },
+        options={
+            "ru": (
+                "На грудную клетку по схеме на самом электроде",
+                "На живот и на бедро",
+                "На спину и на шею",
+                "Куда удобно — на результат это не влияет",
+            ),
+            "en": (
+                "On the chest, following the diagram printed on the pad",
+                "On the abdomen and the thigh",
+                "On the back and the neck",
+                "Anywhere — it does not affect the result",
+            ),
+        },
+        correct=0,
+        explain={
+            "ru": "Схема нарисована на электроде: правое подключичье и левая подмышечная линия. "
+                  "Наклеенные «как получилось» электроды дают неверную оценку ритма.",
+            "en": "The diagram is printed on the pad: right infraclavicular and left mid-axillary line. "
+                  "Randomly placed pads give a wrong rhythm analysis.",
+        },
+        checklist="п. 40",
+        triggers={
+            "ru": (
+                ("по схеме", "на грудную", "на груди", "подключич", "подмышечн"),
+                ("живот", "бедро"),
+                ("спина", "шея", "на спину"),
+                ("куда удобно", "не влияет"),
+            ),
+            "en": (
+                ("diagram", "on the chest", "infraclavicular", "axillary"),
+                ("abdomen", "thigh"),
+                ("back", "neck"),
+                ("anywhere", "does not affect"),
+            ),
+        },
+    ),
+    VideoQuestion(
+        id=15,
+        clip="06_aed_rhythm",
+        title={
+            "ru": "Повторная команда АНД, врач отводит руки",
+            "en": "Repeated AED prompt, the doctor pulls his hands away",
+        },
+        question={
+            "ru": "Что делают по повторной команде АНД?",
+            "en": "What is done at the repeated AED prompt?",
+        },
+        options={
+            "ru": (
+                "Прекращают СЛР для анализа ритма и не прикасаются к пациенту",
+                "Продолжают массаж, не обращая внимания на команду",
+                "Снимают электроды и выключают аппарат",
+                "Начинают вентиляцию мешком чаще обычного",
+            ),
+            "en": (
+                "Stop CPR for rhythm analysis and do not touch the patient",
+                "Continue compressions, ignoring the prompt",
+                "Remove the pads and switch the device off",
+                "Start bag ventilation more often than usual",
+            ),
+        },
+        correct=0,
+        explain={
+            "ru": "Анализ ритма требует тишины по прикосновениям: иначе аппарат «увидит» помехи. "
+                  "После команды СЛР либо возобновляют, либо готовят разряд.",
+            "en": "Rhythm analysis needs no touching: otherwise the device sees interference. "
+                  "After the prompt you either resume CPR or prepare a shock.",
+        },
+        checklist="п. 42, 45",
+        triggers={
+            "ru": (
+                ("прекращают", "останавливают слр", "не прикасаются", "для анализа ритма"),
+                ("продолжают массаж", "не обращая"),
+                ("снимают электроды", "выключают"),
+                ("вентиляцию", "мешком чаще"),
+            ),
+            "en": (
+                ("stop cpr", "do not touch", "rhythm analysis"),
+                ("continue compressions", "ignoring"),
+                ("remove the pads", "switch off"),
+                ("ventilation", "more often"),
+            ),
+        },
+    ),
+    VideoQuestion(
+        id=16,
+        clip="07_airway",
+        title={
+            "ru": "Врач осматривает полость рта перед воздуховодом",
+            "en": "The doctor inspects the mouth before inserting the airway",
+        },
+        question={
+            "ru": "Что проверяют перед постановкой воздуховода?",
+            "en": "What is checked before inserting an airway?",
+        },
+        options={
+            "ru": (
+                "Проходимость дыхательных путей и полость рта на инородные тела",
+                "Пульс на сонной артерии",
+                "Фотореакцию зрачков",
+                "Уровень глюкозы крови",
+            ),
+            "en": (
+                "Airway patency and the mouth for foreign bodies",
+                "Carotid pulse",
+                "Pupil light reaction",
+                "Blood glucose",
+            ),
+        },
+        correct=0,
+        explain={
+            "ru": "Это пункт A — airway. Сначала убедиться, что путь свободен, и только потом "
+                  "ставить воздуховод: иначе его просто вытолкнет или он перекроет вход.",
+            "en": "This is step A — airway. Confirm the passage is clear before inserting the airway, "
+                  "otherwise it is pushed out or blocks the entrance.",
+        },
+        checklist="п. 16",
+        triggers={
+            "ru": (
+                ("проходимость", "полость рта", "инородные", "дыхательных путей"),
+                ("сонной", "пульс"),
+                ("зрачк", "фотореакци"),
+                ("глюкоз", "сахар"),
+            ),
+            "en": (
+                ("patency", "mouth", "foreign bodies", "airway"),
+                ("carotid", "pulse"),
+                ("pupil", "light reaction"),
+                ("glucose", "sugar"),
+            ),
+        },
+    ),
+    VideoQuestion(
+        id=17,
+        clip="08_vent",
+        title={
+            "ru": "Двое спасателей работают у кушетки",
+            "en": "Two rescuers working at the couch",
+        },
+        question={
+            "ru": "Как часто спасатели меняются местами при реанимации?",
+            "en": "How often should rescuers swap roles during resuscitation?",
+        },
+        options={
+            "ru": (
+                "Каждые 2 минуты — иначе падает глубина компрессий",
+                "Каждую минуту",
+                "Каждые 10 минут",
+                "Не меняются до приезда скорой",
+            ),
+            "en": (
+                "Every 2 minutes — otherwise compression depth drops",
+                "Every minute",
+                "Every 10 minutes",
+                "They do not swap until the ambulance arrives",
+            ),
+        },
+        correct=0,
+        explain={
+            "ru": "Через две минуты непрерывного массажа качество падает даже у опытных. "
+                  "Смена занимает 5 секунд, а глубину возвращает.",
+            "en": "After two minutes of continuous compressions quality drops even for experienced "
+                  "rescuers. A swap takes 5 seconds and restores depth.",
+        },
+        checklist="п. 47–48",
+        triggers={
+            "ru": (
+                ("2 минуты", "две минуты", "каждые две"),
+                ("каждую минуту", "каждую 1"),
+                ("10 минут", "десять минут"),
+                ("не меняются", "до приезда"),
+            ),
+            "en": (
+                ("2 minutes", "two minutes", "every two"),
+                ("every minute",),
+                ("10 minutes", "ten minutes"),
+                ("do not swap", "until the ambulance"),
+            ),
+        },
+    ),
+    VideoQuestion(
+        id=18,
+        clip="09_repeat",
+        title={
+            "ru": "Реанимация продолжается, рядом помощница",
+            "en": "Resuscitation continues, the assistant is nearby",
+        },
+        question={
+            "ru": "Когда прекращают реанимационные мероприятия?",
+            "en": "When is resuscitation stopped?",
+        },
+        options={
+            "ru": (
+                "При восстановлении кровообращения или по приезде СМП",
+                "После третьего разряда АНД",
+                "Ровно через 10 минут от начала",
+                "Когда врач устал",
+            ),
+            "en": (
+                "When circulation returns or the ambulance arrives",
+                "After the third AED shock",
+                "Exactly 10 minutes after the start",
+                "When the doctor is tired",
+            ),
+        },
+        correct=0,
+        explain={
+            "ru": "Реанимацию ведут без пауз до восстановления кровообращения или передачи бригаде. "
+                  "Фиксированного «через 10 минут» в алгоритме нет.",
+            "en": "Resuscitation continues without pauses until circulation returns or the team takes "
+                  "over. There is no fixed “after 10 minutes” in the algorithm.",
+        },
+        checklist="п. 49",
+        triggers={
+            "ru": (
+                ("восстановлени", "приезде", "передаче", "до приезда скорой"),
+                ("третьего разряда", "после третьего"),
+                ("10 минут", "десять минут", "ровно через"),
+                ("устал", "по желанию"),
+            ),
+            "en": (
+                ("circulation returns", "ambulance arrives", "handover"),
+                ("third shock",),
+                ("10 minutes", "ten minutes"),
+                ("tired",),
+            ),
+        },
+    ),
+    VideoQuestion(
+        id=19,
+        clip="01_pulseox",
+        title={
+            "ru": "Врач осматривает пациента по шагам",
+            "en": "The doctor examines the patient step by step",
+        },
+        question={
+            "ru": "В какой последовательности идёт осмотр по паспорту станции?",
+            "en": "In what order does the station passport require the examination?",
+        },
+        options={
+            "ru": (
+                "ABCDE: дыхательные пути, дыхание, кровообращение, неврология, осмотр",
+                "Сначала анализы и ЭКГ, затем осмотр",
+                "CABDE: сразу кровообращение, потом дыхание",
+                "В любом удобном порядке",
+            ),
+            "en": (
+                "ABCDE: airway, breathing, circulation, neurological status, examination",
+                "Labs and ECG first, then the examination",
+                "CABDE: circulation first, then breathing",
+                "In any convenient order",
+            ),
+        },
+        correct=0,
+        explain={
+            "ru": "ABCDE — это и порядок, и страховка: сначала то, что убивает быстрее. "
+                  "При остановке кровообращения порядок меняется на КГК и АНД, но не на «как удобно».",
+            "en": "ABCDE is both the order and the safety net: the fastest killer first. In cardiac "
+                  "arrest the sequence switches to compressions and AED, never to “any order”.",
+        },
+        checklist="п. 41",
+        triggers={
+            "ru": (
+                ("abcde", "а б ц д е", "дыхательные пути, дыхание", "по порядку abcde"),
+                ("сначала анализы", "сначала экг", "анализы и экг"),
+                ("cabde", "сразу кровообращение"),
+                ("любом порядке", "как удобно"),
+            ),
+            "en": (
+                ("abcde", "airway breathing circulation"),
+                ("labs first", "ecg first", "tests first"),
+                ("cabde", "circulation first"),
+                ("any order", "convenient"),
+            ),
+        },
+    ),
+    VideoQuestion(
+        id=20,
+        clip="04_arrest",
+        title={
+            "ru": "Врач у кушетки с помощницей, рядом укладка",
+            "en": "The doctor at the couch with the assistant, the kit nearby",
+        },
+        question={
+            "ru": "Что входит в шаг D — неврологический статус?",
+            "en": "What belongs to step D — neurological status?",
+        },
+        options={
+            "ru": (
+                "Фотореакция зрачков, мышечный тонус и глюкоза крови глюкометром",
+                "Только измерение артериального давления",
+                "Только пальпация живота",
+                "Только аускультация лёгких",
+            ),
+            "en": (
+                "Pupil light reaction, muscle tone and blood glucose with a glucometer",
+                "Blood pressure measurement only",
+                "Abdominal palpation only",
+                "Lung auscultation only",
+            ),
+        },
+        correct=0,
+        explain={
+            "ru": "Шаг D — это зрачки, тонус конечностей и глюкоза с интерпретацией. "
+                  "Давление и лёгкие — это шаги C и B, их путают чаще всего.",
+            "en": "Step D covers pupils, limb tone and glucose with interpretation. Blood pressure "
+                  "and lungs belong to steps C and B — the most common mix-up.",
+        },
+        checklist="п. 20–22",
+        triggers={
+            "ru": (
+                ("зрачк", "тонус", "глюкоз", "фотореакци"),
+                ("давлени", "ад"),
+                ("живот", "пальпаци"),
+                ("легких", "аускультаци"),
+            ),
+            "en": (
+                ("pupil", "tone", "glucose"),
+                ("blood pressure",),
+                ("abdomen", "palpation"),
+                ("lungs", "auscultation"),
+            ),
+        },
+    ),
 )
 
 TOTAL = len(QUESTIONS)
+
+# ----------------------------- разделы видеотеста -----------------------------
+# Каждый раздел — мини-подборка по теме станции: картинка (постер фрагмента),
+# короткое описание и набор вопросов. В заходе — до RUN_SIZE вопросов, порядок случайный.
+RUN_SIZE = 10
+
+
+@dataclass(frozen=True)
+class Section:
+    key: str
+    title: dict[str, str]
+    description: dict[str, str]
+    cover: str                     # имя клипа, из которого берётся постер
+    question_ids: tuple[int, ...]
+
+    def public(self, lang: str = "ru") -> dict:
+        lang = lang if lang in LANGS else "ru"
+        return {
+            "key": self.key,
+            "title": self.title[lang],
+            "description": self.description[lang],
+            "cover": self.cover,
+            "total": len(self.question_ids),
+            "run_size": min(RUN_SIZE, len(self.question_ids)),
+        }
+
+
+SECTIONS: tuple[Section, ...] = (
+    Section(
+        key="all",
+        title={"ru": "Все разделы", "en": "All sections"},
+        description={
+            "ru": "Случайные 10 вопросов из всех 20: и осмотр, и СЛР, и вентиляция.",
+            "en": "10 random questions out of all 20: examination, CPR and ventilation.",
+        },
+        cover="04_arrest",
+        question_ids=tuple(q.id for q in QUESTIONS),
+    ),
+    Section(
+        key="exam",
+        title={"ru": "Осмотр пациента и ABCDE", "en": "Patient examination and ABCDE"},
+        description={
+            "ru": "Пульсоксиметрия, ЭКГ в 12 отведениях, кислородотерапия по показаниям, порядок ABCDE.",
+            "en": "Pulse oximetry, 12-lead ECG, oxygen therapy by indication, the ABCDE order.",
+        },
+        cover="01_pulseox",
+        question_ids=(1, 2, 10, 12, 19, 20),
+    ),
+    Section(
+        key="cpr",
+        title={"ru": "СЛР, АНД и реанимация", "en": "CPR, AED and resuscitation"},
+        description={
+            "ru": "Констатация остановки, включение АНД, электроды, разряд, когда заканчивать реанимацию.",
+            "en": "Confirming arrest, switching the AED on, pads, shock, when to stop resuscitation.",
+        },
+        cover="05_aed_on",
+        question_ids=(4, 5, 6, 13, 14, 15, 18),
+    ),
+    Section(
+        key="airway",
+        title={"ru": "Дыхательные пути и вентиляция", "en": "Airway and ventilation"},
+        description={
+            "ru": "Воздуховод, вентиляция мешком, соотношение 30:2, смена спасателей.",
+            "en": "Airway, bag ventilation, the 30:2 ratio, swapping rescuers.",
+        },
+        cover="07_airway",
+        question_ids=(7, 8, 16, 17),
+    ),
+    Section(
+        key="call",
+        title={"ru": "Вызов СМП и работа в команде", "en": "Calling the ambulance and teamwork"},
+        description={
+            "ru": "Пять элементов вызова, передача диагноза, указания помощнику.",
+            "en": "The five elements of the call, reporting the diagnosis, instructions to the assistant.",
+        },
+        cover="03_call_smp",
+        question_ids=(3, 11),
+    ),
+)
+
+SECTION_BY_KEY = {section.key: section for section in SECTIONS}
 
 # порог → вердикт (сверху вниз)
 VERDICTS: tuple[tuple[float, str, str], ...] = (
@@ -490,6 +1099,10 @@ VERDICTS_EN: tuple[tuple[float, str, str], ...] = (
     (0, "bad", "Algorithm not learnt — start with the emergency care guide"),
 )
 
+# куда ведёт совет в вердикте (страница есть на сайте)
+GUIDE_URL = "/instruction/emergency-help"
+GUIDE_LABEL = {"ru": "инструкции по ЭМП", "en": "the emergency care guide"}
+
 
 def by_id(question_id: int) -> VideoQuestion | None:
     for question in QUESTIONS:
@@ -505,6 +1118,28 @@ def verdict(percent: float, lang: str = "ru") -> tuple[str, str]:
         if percent >= threshold:
             return code, text
     return "bad", table[-1][2]
+
+
+def pick_questions(section_key: str = "all", count: int = RUN_SIZE,
+                   rng=None) -> list[VideoQuestion]:
+    """Случайная подборка вопросов раздела: каждый заход — новый набор и новый порядок."""
+    import random
+
+    rng = rng or random
+    section = SECTION_BY_KEY.get(section_key) or SECTION_BY_KEY["all"]
+    pool = [q for q in (by_id(qid) for qid in section.question_ids) if q is not None]
+    rng.shuffle(pool)
+    return pool[:max(1, min(count, len(pool)))]
+
+
+def option_order(question: VideoQuestion, rng=None) -> list[int]:
+    """Порядок показа вариантов: перемешиваем, чтобы ответы не запоминались по номеру."""
+    import random
+
+    rng = rng or random
+    order = list(range(len(question.options["ru"])))
+    rng.shuffle(order)
+    return order
 
 
 def check(question: VideoQuestion, answer: int, lang: str = "ru") -> dict:
