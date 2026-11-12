@@ -702,7 +702,7 @@ function viewRegister() {
       <div id="regError" class="alert error hidden"></div>
       <div class="field"><label for="fullName">ФИО</label><input id="fullName" type="text" placeholder="Иванов Иван"></div>
       <div class="field"><label for="regEmail">Почта</label><input id="regEmail" type="email"></div>
-      <div class="field"><label for="regPassword">Пароль (минимум 6 символов)</label><input id="regPassword" type="password"></div>
+      <div class="field"><label for="regPassword">Пароль (минимум 8 символов)</label><input id="regPassword" type="password"></div>
       <div class="field-row">
         <div class="field">
           <label for="regRole">Роль</label>
@@ -728,7 +728,7 @@ function doRegister() {
 
   const fail = (message) => { box.textContent = message; box.classList.remove('hidden'); };
   if (!fullName || !email) return fail('Заполните ФИО и почту');
-  if (password.length < 6) return fail('Пароль должен быть не короче 6 символов');
+  if (password.length < 8) return fail('Пароль должен быть не короче 8 символов');
   if (DB.users.some((u) => u.email === email)) return fail('Пользователь с такой почтой уже есть');
 
   const user = { id: DB.seq.user++, email, fullName, password, role, group, status: 'active', createdAt: Date.now() };
@@ -1522,7 +1522,7 @@ function viewAccount(user) {
       <section class="panel">
         <h2 style="margin-top:0">Смена пароля</h2>
         <div class="field"><label for="curPass">Текущий пароль</label><input id="curPass" type="password"></div>
-        <div class="field"><label for="newPass">Новый пароль (минимум 6)</label><input id="newPass" type="password"></div>
+        <div class="field"><label for="newPass">Новый пароль (минимум 8)</label><input id="newPass" type="password"></div>
         <div class="field"><label for="newPass2">Новый пароль ещё раз</label><input id="newPass2" type="password"></div>
         <button class="btn" onclick="changePassword()">Сменить пароль</button>
       </section>
@@ -1549,7 +1549,7 @@ function changePassword() {
   ok.classList.add('hidden');
 
   if (current !== user.password) { err.textContent = 'Текущий пароль неверный'; err.classList.remove('hidden'); return; }
-  if (next.length < 6) { err.textContent = 'Новый пароль — минимум 6 символов'; err.classList.remove('hidden'); return; }
+  if (next.length < 8) { err.textContent = 'Новый пароль — минимум 8 символов'; err.classList.remove('hidden'); return; }
   if (next !== next2) { err.textContent = 'Пароли не совпадают'; err.classList.remove('hidden'); return; }
   user.password = next;
   saveDB();

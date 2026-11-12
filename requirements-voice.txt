@@ -1,0 +1,7 @@
+# Распознавание речи на сервере (необязательно): быстрый Whisper на CPU
+# Установка: pip install -r requirements-voice.txt
+# Модель качается отдельно: python tools/download_voice_model.py
+faster-whisper==1.2.1
+# faster-whisper тянет их сам, но пишем явно: без PyAV не читается запись браузера (webm/opus)
+av>=12
+numpy>=1.24

@@ -15,7 +15,7 @@
 
 ## 1. Залить код на GitHub
 
-1. Распакуйте `ekstrenka_v9_2026-10-26.zip` → внутри папка `project`.
+1. Распакуйте `ekstrenka_v21_2026-11-11.zip` → внутри папка `project`.
 2. Откройте https://github.com/yes0rr/ekstrenka
 3. **Add file → Upload files**.
 4. Откройте папку `project`, выделите всё (Ctrl+A) и перетащите в окно браузера.
@@ -218,6 +218,41 @@ apt-get install -y libgl1 libglib2.0-0
 ```
 /opt/ispytaniya/.venv/bin/pip install mediapipe opencv-python-headless numpy
 ```
+
+---
+
+## 5.1. Включить распознавание голоса на сервере (v21, необязательно)
+
+Нужно, если голосовой ответ в видеотесте не работает: в Firefox распознавания речи нет вовсе, а Chrome без
+сервисов Google сразу отдаёт ошибку «network». Тогда фразу распознаёт наш сервер — локальная модель Whisper,
+бесплатно, без внешних сервисов.
+
+Три команды (по одной строке):
+
+```
+/opt/ispytaniya/.venv/bin/pip install -r /opt/ispytaniya/requirements-voice.txt
+```
+```
+cd /opt/ispytaniya && /opt/ispytaniya/.venv/bin/python tools/download_voice_model.py
+```
+```
+printf 'VOICE_ENABLED=1\nWHISPER_MODEL=base\nWHISPER_COMPUTE=int8\n' >> /opt/ispytaniya/.env && chown -R ispytaniya:ispytaniya /opt/ispytaniya && systemctl restart ispytaniya
+```
+
+Что важно знать:
+
+- модель `base` — 145 МБ на диске и ~500 МБ в памяти, скачивается один раз; на сервере 2 ГБ памяти (и без
+  видеоанализа) этого достаточно. Если памяти мало — `WHISPER_MODEL=tiny` (75 МБ, ~250 МБ в памяти);
+- рядом с видеоанализом (`VISION_ENABLED=1`, MediaPipe ~300 МБ) на 2 ГБ лучше брать `tiny`;
+- **записи не сохраняются**: звук приходит в память, распознаётся и выбрасывается, в лог пишется только текст;
+- первая фраза после перезапуска распознаётся дольше (модель грузится в память ~1 с и потом остаётся);
+- проверить, что включилось: открыть `/student/video-quiz` — под кнопкой «Ответить голосом» должна быть подпись
+  «запись распознаётся на нашем сервере», а не «распознаёт браузер». Или напрямую:
+  ```
+  curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8000/api/video-quiz/voice/status
+  ```
+  `401` — маршрут есть (нужен вход), `404` — на сервере старая версия кода;
+- выключить обратно: `sed -i 's/^VOICE_ENABLED=1/VOICE_ENABLED=0/' /opt/ispytaniya/.env && systemctl restart ispytaniya`.
 
 ---
 
