@@ -44,7 +44,14 @@ function tick() {
   const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
   const minutes = String(Math.floor(seconds / 60)).padStart(2, '0');
   const rest = String(seconds % 60).padStart(2, '0');
-  document.getElementById('timerTag').textContent = minutes + ':' + rest;
+  const tag = document.getElementById('timerTag');
+  tag.textContent = minutes + ':' + rest;
+  /* лимит времени из задания: подсвечиваем, но не завершаем молча — ответы не теряем */
+  const limit = Number(tag.dataset.limitMin || 0) * 60;
+  if (limit && seconds > limit) {
+    tag.classList.add('is-over');
+    tag.title = 'Время вышло — завершите испытание';
+  }
   if (cameraOn || micOn) {
     mediaSeconds = seconds;
     updateMediaMeta();

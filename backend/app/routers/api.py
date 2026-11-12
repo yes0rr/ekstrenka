@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from ..db import get_db
-from ..deps import get_current_user, require_teacher, require_user
+from ..deps import get_current_user, require_student, require_teacher, require_user
 from ..models import (
     Answer,
     Attempt,
@@ -260,12 +260,36 @@ def delete_test(test_id: int, request: Request, db: Session = Depends(get_db),
 
 
 # ----------------------------- вопросы -----------------------------
+
+def _check_question(payload: QuestionIn) -> None:
+    """Не даём сохранить вопрос, на который нельзя ответить.
+
+    Варианты ответа нужны для «single»/«multiple»; верный ответ обязан быть
+    одним из вариантов, иначе автопроверка всегда ставит 0.
+    """
+    if payload.kind in {"single", "multiple"}:
+        options = [o.strip() for o in payload.options if o and o.strip()]
+        if len(options) < 2:
+            raise HTTPException(422, "Для вопроса с вариантами нужно минимум два варианта ответа")
+        correct = payload.correct if isinstance(payload.correct, list) else [payload.correct or ""]
+        correct = [c.strip() for c in correct if c and str(c).strip()]
+        if not correct:
+            raise HTTPException(422, "Укажите правильный вариант ответа")
+        missing = [c for c in correct if c not in options]
+        if missing:
+            raise HTTPException(
+                422, "Правильный ответ должен совпадать с одним из вариантов: " + ", ".join(missing[:3]))
+        if payload.kind == "single" and len(correct) > 1:
+            raise HTTPException(422, "У вопроса с одним ответом может быть только один правильный вариант")
+
+
 @router.post("/tests/{test_id}/questions", status_code=201)
 def add_question(test_id: int, payload: QuestionIn, request: Request, db: Session = Depends(get_db),
                  user: User = Depends(require_teacher)):
     test = _get_test(db, test_id)
     if test.author_id != user.id:
         raise HTTPException(403, "Это не ваше испытание")
+    _check_question(payload)
     question = Question(
         test_id=test.id,
         order_index=len(test.questions),
@@ -291,6 +315,7 @@ def patch_question(question_id: int, payload: QuestionIn, request: Request, db: 
         raise HTTPException(404, "Вопрос не найден")
     if question.test.author_id != user.id:
         raise HTTPException(403, "Это не ваше испытание")
+    _check_question(payload)
     question.text = payload.text
     question.kind = payload.kind
     question.options = dumps(payload.options or [])
@@ -318,7 +343,8 @@ def delete_question(question_id: int, request: Request, db: Session = Depends(ge
 # ----------------------------- попытки -----------------------------
 @router.post("/attempts", status_code=201)
 def start_attempt(payload: AttemptIn, request: Request, db: Session = Depends(get_db),
-                  user: User = Depends(require_user)):
+                  user: User = Depends(require_student)):
+    """Начать попытку может только учащийся: попытки преподавателя засоряли бы статистику."""
     test = _get_test(db, payload.test_id)
     if not test.is_published:
         raise HTTPException(403, "Испытание не опубликовано")

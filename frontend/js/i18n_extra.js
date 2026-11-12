@@ -214,6 +214,34 @@
       "Short clips from a real run of the Emergency Medical Care station. Pick a section — questions are new and shuffled every time.",
     "Заход": "Run",
 
+    "по теме: ": "on topic: ",
+    "по теме:": "on topic:",
+    "вариантов нет — отвечаете текстом или голосом": "no options — answer by typing or speaking",
+    "вопросов": "questions",
+    "Готовлю микрофон…": "Preparing the microphone…",
+    "Слушаю… говорите ответ": "Listening… say your answer",
+    "Распознаю…": "Recognising…",
+    "Запись пустая — говорите ближе к микрофону.": "The recording is empty — speak closer to the microphone.",
+    "Запись с микрофона не поддерживается этим браузером.": "Recording is not supported by this browser.",
+    "Не понял ответ — сформулируйте иначе или скажите короче. Ответ не засчитан.":
+      "Did not understand — phrase it differently or say it more briefly. The answer was not counted.",
+    "Не понял ответ — попробуйте ещё раз.": "Did not understand — try again.",
+    "Сказанное не совпало с ответом — попробуйте иначе.": "What you said did not match an answer — try another wording.",
+    "Введите ответ или скажите его голосом.": "Type the answer or say it aloud.",
+    "Неверно — правильный ответ:": "Incorrect — correct answer:",
+    "Режим «Обучение»: варианты ответа и вердикт сразу.":
+      "Training mode: answer options and an immediate verdict.",
+    "Режим «Зачёт»: вариантов не будет — отвечайте текстом или голосом.":
+      "Exam mode: no options — answer by typing or speaking.",
+    "Голосовой ответ: нажмите кнопку и говорите — запись распознаётся на нашем сервере и никуда не сохраняется.":
+      "Voice answer: press the button and speak — the recording is recognised on our server and is not stored.",
+    "Голосовой ответ: распознаёт браузер (Chrome, Edge). Если не работает — включите распознавание на сервере.":
+      "Voice answer is recognised by the browser (Chrome, Edge). If it fails, enable server recognition.",
+    "Браузер не может распознать речь — включите распознавание на сервере (VOICE_ENABLED=1) или введите ответ текстом.":
+      "The browser cannot recognise speech — enable server recognition (VOICE_ENABLED=1) or type your answer.",
+    "Голосовой ответ в этом браузере недоступен. Введите ответ текстом.":
+      "Voice answers are not available in this browser. Type your answer.",
+
     // фразы с числами
     __patterns: [
       ["^Фрагмент (\\d+) из (\\d+)$", "Clip $1 of $2"],

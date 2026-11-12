@@ -14,8 +14,8 @@
     </thead>
     <tbody>
     {% for a in attempts %}
-      
-        <td data-label="Учащийся">
+        <tr>
+          <td data-label="Учащийся">
           {{ a.student.full_name }}
           <div class="muted small">{{ a.student.email }}</div>
         </td>
@@ -53,6 +53,6 @@
 
 {% endblock %}
 {% block scripts %}
-<script src="/static/js/api.js"></script>
-<script src="/static/js/results.js"></script>
+<script src="/static/js/api.js?v=21"></script>
+<script src="/static/js/results.js?v=21"></script>
 {% endblock %}

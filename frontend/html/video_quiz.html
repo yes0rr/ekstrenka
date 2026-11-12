@@ -19,14 +19,17 @@
     <div class="panel quiz-modes" id="modePanel">
       <div class="segmented" role="tablist" aria-label="Режим прохождения">
         <button type="button" class="seg is-on" data-mode="training" role="tab" aria-selected="true">
-          Обучение
+          <span class="seg-check">✓</span>
+          <b>Обучение</b>
           <span>варианты и вердикт сразу после ответа</span>
         </button>
         <button type="button" class="seg" data-mode="testing" role="tab" aria-selected="false">
-          Зачёт
-          <span>вариантов нет — ответ вводите или проговариваете сами</span>
+          <span class="seg-check"></span>
+          <b>Зачёт</b>
+          <span>вариантов нет — отвечаете текстом или голосом</span>
         </button>
       </div>
+      <div class="muted small quiz-mode-hint" id="modeHint">Режим «Обучение»: варианты ответа и вердикт сразу.</div>
     </div>
 
     <!-- каталог разделов -->
@@ -37,7 +40,7 @@
       <div class="panel quiz-bar">
         <div class="quiz-progressbar"><i id="progressFill"></i></div>
         <div class="quiz-bar-row">
-          <span class="muted small" id="runTitle">Заход</span>
+          <span class="muted small"><b id="modeBadge" class="run-mode-badge is-training">Обучение</b> <span id="runTitle">Заход</span></span>
           <span class="muted small">Отвечено <b><span id="answeredCount">0</span>/<span id="totalCount">0</span></b></span>
           <button class="btn" id="finishBtn" type="button" disabled>Завершить и увидеть разбор</button>
           <button class="btn ghost small" id="backBtn" type="button">К разделам</button>
@@ -78,5 +81,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/video_quiz.js?v=20"></script>
+<script src="/static/js/video_voice.js?v=21"></script>
+<script src="/static/js/video_quiz.js?v=21"></script>
 {% endblock %}

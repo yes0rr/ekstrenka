@@ -115,12 +115,18 @@ def test_start_shuffles_questions_and_options():
         assert sorted(item["options"]) == sorted(question.options["ru"])
 
 
-def test_section_limits_question_pool():
+def test_every_run_has_all_questions():
+    """В любом разделе заход длится одинаково: 20 вопросов (свои + добранные)."""
     with _student_client() as client:
         run = _start(client, section="call")
-        assert len(run["items"]) == 2
-        assert {item["id"] for item in run["items"]} == {3, 11}
+        assert len(run["items"]) == TOTAL == RUN_SIZE == 20
+        ids = {item["id"] for item in run["items"]}
+        assert {3, 11} <= ids, "вопросы раздела должны быть в заходе"
         assert run["section"] == "call"
+
+        wide = _start(client, section="all")
+        assert len(wide["items"]) == TOTAL
+        assert len({item["id"] for item in wide["items"]}) == TOTAL
 
 
 def test_start_in_english():
@@ -150,12 +156,21 @@ def test_training_answer_returns_verdict_in_display_indexes():
             "run_id": run["run_id"], "question_id": item["id"], "answer": right}).json()
         assert body["correct"] is True
         assert body["correct_index"] == right  # индекс именно в том порядке, что видел учащийся
+        assert body["correct_text"] == item["options"][right]  # и сам текст ответа
         assert body["explain"] and body["checklist"]
 
-        wrong = (right + 1) % len(item["options"])
+        # второй ответ на тот же вопрос не принимается: иначе после вердикта можно «передумать»
+        again = client.post("/api/video-quiz/answer", json={
+            "run_id": run["run_id"], "question_id": item["id"], "answer": (right + 1) % len(item["options"])})
+        assert again.status_code == 409
+
+        # неверный ответ проверяем на другом вопросе того же захода
+        other = run["items"][1]
+        wrong = (_correct_display_index(run, other) + 1) % len(other["options"])
         body = client.post("/api/video-quiz/answer", json={
-            "run_id": run["run_id"], "question_id": item["id"], "answer": wrong}).json()
+            "run_id": run["run_id"], "question_id": other["id"], "answer": wrong}).json()
         assert body["correct"] is False
+        assert body["correct_text"] == other["options"][body["correct_index"]]
 
 
 def test_testing_mode_keeps_verdict_secret():
@@ -199,7 +214,7 @@ def test_answer_validation():
     with _student_client() as client:
         run = _start(client, section="call")
         assert client.post("/api/video-quiz/answer", json={
-            "run_id": run["run_id"], "question_id": 8, "answer": 0}).status_code == 404  # не из этой попытки
+            "run_id": run["run_id"], "question_id": 999, "answer": 0}).status_code == 404  # такого вопроса нет
         assert client.post("/api/video-quiz/answer", json={
             "run_id": run["run_id"], "question_id": 3, "answer": 9}).status_code == 422
         assert client.post("/api/video-quiz/answer", json={
@@ -256,7 +271,7 @@ def test_unanswered_questions_count_as_wrong():
             "answer": _correct_display_index(run, item)})
         summary = client.post("/api/video-quiz/finish", json={"run_id": run["run_id"]}).json()
         assert summary["score"] == 1
-        assert summary["percent"] == 10.0
+        assert summary["percent"] == 5.0
         assert len(summary["details"]) == RUN_SIZE
         missing = [d for d in summary["details"] if d["chosen"] == -1]
         assert len(missing) == RUN_SIZE - 1
@@ -305,7 +320,7 @@ def test_voice_endpoint_validates_run():
     with _student_client() as client:
         run = _start(client, section="call")
         assert client.post("/api/video-quiz/voice", json={
-            "run_id": run["run_id"], "question_id": 8, "transcript": "тридцать на два"}).status_code == 404
+            "run_id": run["run_id"], "question_id": 999, "transcript": "тридцать на два"}).status_code == 404
         assert client.post("/api/video-quiz/voice", json={
             "run_id": run["run_id"], "question_id": 3, "transcript": ""}).status_code == 422
 
@@ -370,3 +385,100 @@ def test_translation_checker_is_clean_for_key_pages():
         phrases = template_phrases(Path("frontend/html") / name)
         missing = [p for p in phrases if p not in keys]
         assert not missing, (name, missing[:5])
+
+
+# ----------------------------- нераспознанный ответ -----------------------------
+
+def test_unrecognised_text_is_not_counted_as_wrong():
+    """В зачёте непонятый ответ не засчитывается как ошибка — можно повторить."""
+    with _student_client() as client:
+        run = _start(client, section="all", mode="testing")
+        first = client.post("/api/video-quiz/answer", json={
+            "run_id": run["run_id"], "question_id": 1, "text": "ну такое не помню"}).json()
+        assert first["retry"] is True and first["recognised"] is False
+
+        # ответ не записался: в итогах его нет
+        summary = client.post("/api/video-quiz/finish", json={"run_id": run["run_id"]}).json()
+        item = next(d for d in summary["details"] if d["id"] == 1)
+        assert item["chosen"] == -1 and item["text"] is None
+
+        # а после нормального ответа — засчитывается
+        run2 = _start(client, section="all", mode="testing")
+        body = client.post("/api/video-quiz/answer", json={
+            "run_id": run2["run_id"], "question_id": 1, "text": "пульсоксиметрия"}).json()
+        assert body["accepted"] is True and body["recognised"] is True
+        summary = client.post("/api/video-quiz/finish", json={"run_id": run2["run_id"]}).json()
+        item = next(d for d in summary["details"] if d["id"] == 1)
+        assert item["correct"] is True and item["text"] == "пульсоксиметрия"
+
+
+# ----------------------------- серверное распознавание -----------------------------
+
+def test_voice_status_and_transcribe_availability():
+    """Статус голоса отдаётся всегда; распознавание — 503, если модель не включена."""
+    with _student_client() as client:
+        status = client.get("/api/video-quiz/voice/status").json()
+        assert "server" in status and "available" in status["server"]
+        assert isinstance(status["server"]["available"], bool)
+        assert status["hint"] in {"server", "browser"}
+
+        if not status["server"]["available"]:
+            response = client.post("/api/video-quiz/transcribe",
+                                   json={"audio": "A" * 128, "lang": "ru"})
+            assert response.status_code == 503
+
+
+def test_speech_decoder_and_status_live_in_one_place():
+    """Модуль распознавания: статус, декодирование base64 и проверка модели."""
+    from backend.app import speech
+
+    state = speech.status()
+    assert set(state) >= {"enabled", "dependency", "model", "available", "model_name"}
+    assert speech.decode_base64("data:audio/webm;base64," + "AA" * 50).startswith(b"\x00")
+    assert speech.decode_base64("") == b""
+    assert speech.decode_base64("!!!это не аудио!!!") == b""      # битый base64 не роняет сервер
+    assert speech.decode_base64("AA")  # без «=» на конце тоже читается
+    assert speech.encoded_size("A" * 800) == 600                  # base64 → байты звука
+
+
+# ----------------------------- защита от «передумывания» -----------------------------
+
+def test_second_answer_is_rejected():
+    """Один ответ на вопрос: иначе после вердикта можно выбрать правильный вариант."""
+    with _student_client() as client:
+        run = _start(client)
+        item = run["items"][0]
+        right = _correct_display_index(run, item)
+        assert client.post("/api/video-quiz/answer", json={
+            "run_id": run["run_id"], "question_id": item["id"], "answer": right}).status_code == 200
+        assert client.post("/api/video-quiz/answer", json={
+            "run_id": run["run_id"], "question_id": item["id"], "answer": (right + 1) % 4}).status_code == 409
+
+        summary = client.post("/api/video-quiz/finish", json={"run_id": run["run_id"]}).json()
+        assert summary["score"] == 1  # засчитан именно первый ответ
+
+
+def test_start_validates_section_and_answer_is_never_empty():
+    """Несуществующий раздел и пустой ответ — понятная ошибка, а не «молча все вопросы»."""
+    with _student_client() as client:
+        assert client.post("/api/video-quiz/start", json={
+            "section": "нет-такого", "mode": "training", "lang": "ru"}).status_code == 422
+        run = _start(client, mode="testing")
+        item = run["items"][0]
+        assert client.post("/api/video-quiz/answer", json={
+            "run_id": run["run_id"], "question_id": item["id"]}).status_code == 422
+        assert client.post("/api/video-quiz/answer", json={
+            "run_id": run["run_id"], "question_id": item["id"], "text": "   "}).status_code == 422
+        # после пустого ответа вопрос всё ещё можно отвечать
+        assert client.post("/api/video-quiz/answer", json={
+            "run_id": run["run_id"], "question_id": item["id"], "text": "пульсоксиметрия"}).status_code == 200
+
+
+def test_voice_endpoint_does_not_crash_on_empty_transcript():
+    """Пустая расшифровка не должна ронять сервер (было 500)."""
+    with _student_client() as client:
+        run = _start(client, section="airway")
+        assert client.post("/api/video-quiz/voice", json={
+            "run_id": run["run_id"], "question_id": 8, "transcript": ""}).status_code == 422
+        assert client.post("/api/video-quiz/voice", json={
+            "run_id": run["run_id"], "question_id": 8, "transcript": "тридцать на два"}).status_code == 200

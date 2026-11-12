@@ -105,3 +105,50 @@ def test_training_mode_reveals_verdict(teacher, student):
     assert res["is_correct"] is False
     assert res["correct"] == "Париж"
     assert "Эйфелевой" in res["hint"]
+
+
+
+def test_teacher_cannot_start_attempt(teacher):
+    """Преподаватель не начинает попытки — иначе его «прохождения» попадают в статистику."""
+    assert teacher.post("/api/attempts", json={"test_id": 1}).status_code == 403
+    assert teacher.get("/student/tests/1", follow_redirects=False).status_code == 303
+    assert teacher.get("/student/attempts", follow_redirects=False).status_code == 303
+
+
+def test_forms_keep_values_after_error():
+    """При ошибке входа/регистрации введённое не стирается (кроме пароля)."""
+    with TestClient(app) as client:
+        body = client.post("/login", data={"email": "someone@test.ru", "password": "wrong"}).text
+        assert 'value="someone@test.ru"' in body, "почта должна остаться в поле ввода"
+
+        client.post("/api/auth/register", json={"email": "dup@test.ru", "full_name": "Дубль",
+                                                "password": "secret123", "role": "student"})
+        body = client.post("/register", data={"email": "dup@test.ru", "full_name": "Дубль Второй",
+                                              "password": "secret123", "role": "student",
+                                              "group_name": "РИ-21"}).text
+        assert "уже есть" in body
+        assert 'value="dup@test.ru"' in body and 'value="Дубль Второй"' in body
+        assert 'value="РИ-21"' in body
+
+
+def test_question_cannot_be_unanswerable(teacher):
+    """Вопрос с вариантами обязан иметь варианты и верный ответ среди них."""
+    test_id = teacher.post("/api/tests", json={"title": "Проверка валидации"}).json()["id"]
+    url = f"/api/tests/{test_id}/questions"
+
+    assert teacher.post(url, json={"text": "Без вариантов", "kind": "single"}).status_code == 422
+    assert teacher.post(url, json={"text": "Один вариант", "kind": "single",
+                                   "options": ["да"], "correct": "да"}).status_code == 422
+    assert teacher.post(url, json={"text": "Нет верного", "kind": "single",
+                                   "options": ["да", "нет"]}).status_code == 422
+    assert teacher.post(url, json={"text": "Верный не из списка", "kind": "single",
+                                   "options": ["да", "нет"], "correct": "может"}).status_code == 422
+    assert teacher.post(url, json={"text": "Два верных у одиночного", "kind": "single",
+                                   "options": ["да", "нет"], "correct": ["да", "нет"]}).status_code == 422
+
+    ok = teacher.post(url, json={"text": "Нормальный вопрос", "kind": "single",
+                                 "options": ["да", "нет"], "correct": "да"})
+    assert ok.status_code == 201
+    # правка вопроса проверяется так же
+    qid = ok.json()["id"]
+    assert teacher.patch(f"/api/questions/{qid}", json={"text": "Правка", "kind": "single"}).status_code == 422

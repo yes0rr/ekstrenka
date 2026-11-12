@@ -8,10 +8,11 @@
       {{ 'Режим обучения — с разбором ответов' if test.mode == 'training' else 'Режим тестирования — без подсказок' }}
       · {{ 'на человеке' if test.subject_type == 'human' else 'имитация предметами' }}
       · {{ test.questions|length }} вопр. · {{ test.max_score|num }} баллов
+      · лимит {{ test.duration_min }} мин
     </p>
   </div>
   <div class="btn-row">
-    <span class="tag info" id="timerTag">00:00</span>
+    <span class="tag info" id="timerTag" data-limit-min="{{ test.duration_min }}">00:00</span>
     <button class="btn ghost" onclick="abortAttempt()">Прервать</button>
     <button class="btn" id="finishBtn" onclick="finishAttempt()">Завершить</button>
   </div>
@@ -131,7 +132,7 @@
 {% endblock %}
 {% block scripts %}
 <script id="run-config" type="application/json">{"testId": {{ test.id }}, "mode": "{{ test.mode }}", "total": {{ test.questions|length }}}</script>
-<script src="/static/js/api.js"></script>
-<script src="/static/js/cpr_stream.js"></script>
-<script src="/static/js/student_run.js"></script>
+<script src="/static/js/api.js?v=21"></script>
+<script src="/static/js/cpr_stream.js?v=21"></script>
+<script src="/static/js/student_run.js?v=21"></script>
 {% endblock %}

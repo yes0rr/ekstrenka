@@ -1005,8 +1005,9 @@ TOTAL = len(QUESTIONS)
 
 # ----------------------------- разделы видеотеста -----------------------------
 # Каждый раздел — мини-подборка по теме станции: картинка (постер фрагмента),
-# короткое описание и набор вопросов. В заходе — до RUN_SIZE вопросов, порядок случайный.
-RUN_SIZE = 10
+# короткое описание и набор вопросов. В заходе ВСЕГДА RUN_SIZE вопросов (= весь банк):
+# если в разделе вопросов меньше, добираем остальные, чтобы заход был одинаковым по длине.
+RUN_SIZE = TOTAL
 
 
 @dataclass(frozen=True)
@@ -1024,8 +1025,9 @@ class Section:
             "title": self.title[lang],
             "description": self.description[lang],
             "cover": self.cover,
-            "total": len(self.question_ids),
-            "run_size": min(RUN_SIZE, len(self.question_ids)),
+            "own": len(self.question_ids),      # сколько вопросов именно по теме раздела
+            "run_size": min(RUN_SIZE, TOTAL),   # сколько будет в заходе (добираем из общего банка)
+            "total": TOTAL,
         }
 
 
@@ -1034,8 +1036,8 @@ SECTIONS: tuple[Section, ...] = (
         key="all",
         title={"ru": "Все разделы", "en": "All sections"},
         description={
-            "ru": "Случайные 10 вопросов из всех 20: и осмотр, и СЛР, и вентиляция.",
-            "en": "10 random questions out of all 20: examination, CPR and ventilation.",
+            "ru": "Все 20 вопросов банка в случайном порядке: осмотр, СЛР, вентиляция, вызов СМП.",
+            "en": "All 20 questions in random order: examination, CPR, ventilation, the emergency call.",
         },
         cover="04_arrest",
         question_ids=tuple(q.id for q in QUESTIONS),
@@ -1127,9 +1129,15 @@ def pick_questions(section_key: str = "all", count: int = RUN_SIZE,
 
     rng = rng or random
     section = SECTION_BY_KEY.get(section_key) or SECTION_BY_KEY["all"]
-    pool = [q for q in (by_id(qid) for qid in section.question_ids) if q is not None]
-    rng.shuffle(pool)
-    return pool[:max(1, min(count, len(pool)))]
+    own = [q for q in (by_id(qid) for qid in section.question_ids) if q is not None]
+    rng.shuffle(own)
+    picked = own[:count]
+    if len(picked) < count:
+        # в разделе меньше вопросов, чем нужно на заход — добираем остальными
+        rest = [q for q in QUESTIONS if q not in picked]
+        rng.shuffle(rest)
+        picked += rest[:count - len(picked)]
+    return picked
 
 
 def option_order(question: VideoQuestion, rng=None) -> list[int]:

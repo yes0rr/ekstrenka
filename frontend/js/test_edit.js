@@ -1,12 +1,34 @@
 /* Редактор испытания: публикация, добавление и удаление вопросов.
-   ID испытания приходит из data-атрибута на <body>: data-test-id */
+   ID испытания берём из блока edit-config, который печатает шаблон;
+   запасные пути — data-test-id на <body> и номер из адреса страницы. */
 
-const TEST_ID = Number(document.body.dataset.testId);
+function readTestId() {
+  const node = document.getElementById('edit-config');
+  if (node) {
+    try {
+      const id = Number(JSON.parse(node.textContent).testId);
+      if (Number.isFinite(id) && id > 0) return id;
+    } catch (e) { /* ниже попробуем другие способы */ }
+  }
+  const fromBody = Number(document.body.dataset.testId);
+  if (Number.isFinite(fromBody) && fromBody > 0) return fromBody;
+  const match = window.location.pathname.match(/\/teacher\/tests\/(\d+)/);
+  return match ? Number(match[1]) : 0;
+}
+
+const TEST_ID = readTestId();
+
+function requireTestId() {
+  if (TEST_ID) return true;
+  showError('qerr', 'Не удалось определить испытание — обновите страницу.');
+  return false;
+}
 
 /* ---------- публикация ---------- */
 const publishBtn = document.getElementById('publishBtn');
 if (publishBtn) {
   publishBtn.addEventListener('click', async () => {
+    if (!requireTestId()) return;
     const publish = publishBtn.dataset.published !== 'true';
     try {
       await apiFetch('/api/tests/' + TEST_ID, {
@@ -40,6 +62,7 @@ function lines(elementId) {
 
 async function addQuestion() {
   hideError('qerr');
+  if (!requireTestId()) return;
 
   const kind = document.getElementById('qkind').value;
   const text = document.getElementById('qtext').value.trim();
@@ -49,11 +72,24 @@ async function addQuestion() {
   }
 
   const options = (kind === 'single' || kind === 'multiple') ? lines('qoptions') : [];
+  if ((kind === 'single' || kind === 'multiple') && options.length < 2) {
+    showError('qerr', 'Нужно минимум два варианта ответа (каждый — с новой строки)');
+    return;
+  }
   const correctLines = lines('qcorrect');
   let correct = null;
   if (kind === 'single') correct = correctLines[0] || null;
   else if (kind === 'multiple') correct = correctLines;
   else if (kind === 'text') correct = correctLines;
+
+  if ((kind === 'single' || kind === 'multiple') && !correctLines.length) {
+    showError('qerr', 'Укажите правильный вариант ответа');
+    return;
+  }
+  if (kind === 'single' && correctLines.length > 1) {
+    showError('qerr', 'У вопроса с одним ответом может быть только один правильный вариант');
+    return;
+  }
 
   try {
     await apiFetch(`/api/tests/${TEST_ID}/questions`, {
@@ -74,6 +110,7 @@ async function addQuestion() {
 }
 
 async function deleteQuestion(questionId) {
+  if (!requireTestId()) return;
   if (!confirm('Удалить вопрос?')) return;
   try {
     await apiFetch('/api/questions/' + questionId, { method: 'DELETE' });

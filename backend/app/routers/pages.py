@@ -160,6 +160,9 @@ def student_run_test(test_id: int, request: Request, db: Session = Depends(get_d
                      user: User | None = Depends(get_current_user)):
     if (redirect := _guard(user)) is not None:
         return redirect
+    if user.role != Role.student.value:
+        # проходить испытание может только учащийся; преподавателю — карточка испытания
+        return RedirectResponse(f"/teacher/tests/{test_id}", status_code=303)
     test = db.scalar(
         select(Test).options(selectinload(Test.questions), selectinload(Test.author)).where(Test.id == test_id)
     )
@@ -172,6 +175,8 @@ def student_run_test(test_id: int, request: Request, db: Session = Depends(get_d
 def student_attempts(request: Request, db: Session = Depends(get_db), user: User | None = Depends(get_current_user)):
     if (redirect := _guard(user)) is not None:
         return redirect
+    if user.role != Role.student.value:
+        return RedirectResponse("/teacher/results", status_code=303)
     attempts = db.scalars(
         select(Attempt)
         .options(selectinload(Attempt.test).selectinload(Test.questions), selectinload(Attempt.answers))

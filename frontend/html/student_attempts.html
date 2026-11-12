@@ -9,8 +9,8 @@
     <thead><tr><th>Испытание</th><th>Режим</th><th>Начало</th><th>Статус</th><th>Баллы</th><th>Нейро</th><th></th></tr></thead>
     <tbody>
     {% for a in attempts %}
-      
-        <td data-label="Испытание">{{ a.test.title }}</td>
+        <tr>
+          <td data-label="Испытание">{{ a.test.title }}</td>
         <td data-label="Режим"><span class="tag {{ 'info' if a.mode == 'training' else '' }}">{{ 'обучение' if a.mode == 'training' else 'тестирование' }}</span></td>
         <td class="small mono">{{ a.started_at.strftime('%d.%m.%Y %H:%M') }}</td>
         <td data-label="Начало">

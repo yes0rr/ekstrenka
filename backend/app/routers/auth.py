@@ -32,7 +32,7 @@ router = APIRouter(tags=["auth"])
 def login_page(request: Request, user: User | None = Depends(get_current_user)):
     if user:
         return RedirectResponse("/", status_code=303)
-    return render(request, "login.html", error=None)
+    return render(request, "login.html", error=None, form={})
 
 
 @router.post("/login")
@@ -45,9 +45,9 @@ def login_form(
     user = db.scalar(select(User).where(User.email == email.strip().lower()))
     if not user or not verify_password(user.password_hash, password):
         write_log(db, "login_failed", request=request, payload={"email": email})
-        return render(request, "login.html", error="Неверная почта или пароль")
+        return render(request, "login.html", error="Неверная почта или пароль", form={"email": email})
     if user.status != "active":
-        return render(request, "login.html", error="Аккаунт заблокирован")
+        return render(request, "login.html", error="Аккаунт заблокирован", form={"email": email})
 
     user.last_login_at = utcnow()
     db.commit()
@@ -62,7 +62,8 @@ def login_form(
 def register_page(request: Request, user: User | None = Depends(get_current_user)):
     if user:
         return RedirectResponse("/", status_code=303)
-    return render(request, "register.html", error=None, allow_teacher_signup=settings.allow_teacher_signup)
+    return render(request, "register.html", error=None,
+                  allow_teacher_signup=settings.allow_teacher_signup, form={})
 
 
 @router.post("/register")
@@ -76,10 +77,14 @@ def register_form(
     group_name: str = Form(""),
 ):
     email = email.strip().lower()
+    # при ошибке возвращаем заполненные поля: не заставляем вводить всё заново
+    filled = {"email": email, "full_name": full_name.strip(), "role": role, "group_name": group_name.strip()}
     if db.scalar(select(User).where(User.email == email)):
-        return render(request, "register.html", error="Пользователь с такой почтой уже есть", allow_teacher_signup=settings.allow_teacher_signup)
-    if len(password) < 6:
-        return render(request, "register.html", error="Пароль должен быть не короче 6 символов", allow_teacher_signup=settings.allow_teacher_signup)
+        return render(request, "register.html", error="Пользователь с такой почтой уже есть",
+                      allow_teacher_signup=settings.allow_teacher_signup, form=filled)
+    if len(password) < 8:
+        return render(request, "register.html", error="Пароль должен быть не короче 8 символов",
+                      allow_teacher_signup=settings.allow_teacher_signup, form=filled)
 
     if not settings.allow_teacher_signup:
         role = Role.student.value
@@ -114,7 +119,7 @@ def logout_form(request: Request, db: Session = Depends(get_db), user: User | No
 class RegisterIn(BaseModel):
     email: EmailStr
     full_name: str = Field(min_length=2, max_length=255)
-    password: str = Field(min_length=6, max_length=128)
+    password: str = Field(min_length=8, max_length=128)
     role: str = "student"
     group_name: str | None = None
 

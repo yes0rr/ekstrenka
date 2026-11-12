@@ -30,12 +30,14 @@ from ..videoquiz import (
     QUESTIONS,
     RUN_SIZE,
     SECTIONS,
+    SECTION_BY_KEY,
     TOTAL,
     by_id,
     pick_questions,
     option_order,
     verdict,
 )
+from .. import speech
 from ..voice import choose
 
 router = APIRouter(prefix="/api/video-quiz", tags=["video-quiz"])
@@ -45,7 +47,7 @@ Lang = Literal["ru", "en"]
 
 
 class StartIn(BaseModel):
-    section: str = "all"
+    section: str = "all"  # проверяется в /start: неизвестный раздел — ошибка, а не «все»
     mode: ModeName = "training"
     lang: Lang = "ru"
 
@@ -59,6 +61,12 @@ class AnswerIn(BaseModel):
 
 class FinishIn(BaseModel):
     run_id: int = Field(ge=1)
+
+
+class TranscribeIn(BaseModel):
+    """Короткая запись с микрофона (webm/opus, wav, mp4) в base64 — распознаём на сервере."""
+    audio: str = Field(default="", description="data:audio/webm;base64,... или просто base64")
+    lang: Lang = "ru"
 
 
 class VoiceIn(BaseModel):
@@ -137,6 +145,8 @@ def sections(lang: Lang = "ru", user: User = Depends(_student)) -> dict:
 def start(payload: StartIn, db: Session = Depends(get_db),
           user: User = Depends(_student)) -> dict:
     """Новый заход: случайные вопросы раздела и случайный порядок вариантов."""
+    if payload.section not in SECTION_BY_KEY:
+        raise HTTPException(422, "Нет такого раздела")
     picked = pick_questions(payload.section)
     orders = {str(q.id): option_order(q) for q in picked}
     run = VideoQuizRun(
@@ -173,9 +183,26 @@ def answer(payload: AnswerIn, db: Session = Depends(get_db),
     run_question_ids = [int(qid) for qid in (loads(run.question_ids, []) or [])]
     if question is None or question.id not in run_question_ids:
         raise HTTPException(404, "Такого вопроса нет в этой попытке")
+    if payload.answer is None and not (payload.text or "").strip():
+        raise HTTPException(422, "Пустой ответ")
 
     order = _orders(run).get(str(question.id)) or list(range(len(question.options["ru"])))
+    if str(question.id) in _answers(run):
+        # ответ уже принят: иначе после вердикта можно было бы выбрать правильный вариант
+        raise HTTPException(409, "На этот вопрос уже есть ответ")
     display_index, matched = _resolve(run, question, payload)
+
+    if payload.text is not None and display_index is None:
+        # текст не сопоставился ни с одним вариантом: не засчитываем как ошибку,
+        # а просим сказать иначе (иначе «ответил и получил 0» выглядит несправедливо)
+        return {
+            "question_id": question.id,
+            "accepted": False,
+            "recognised": False,
+            "matched": matched[:5],
+            "retry": True,
+            "text": payload.text,
+        }
 
     answers = _answers(run)
     correct = display_index is not None and order[display_index] == question.correct
@@ -196,12 +223,47 @@ def answer(payload: AnswerIn, db: Session = Depends(get_db),
         "question_id": question.id,
         "correct": bool(correct),
         "correct_index": correct_display,
+        "correct_text": question.options[run.lang][question.correct],
         "chosen": display_index,
         "recognised": display_index is not None,
         "matched": matched[:5],
         "explain": question.explain[run.lang],
         "checklist": question.checklist,
     }
+
+
+@router.get("/voice/status")
+def voice_status(user: User = Depends(_student)) -> dict:
+    """Что доступно для голосового ответа: браузерное распознавание и серверное."""
+    return {
+        "server": speech.status(),
+        "hint": "server" if speech.status()["available"] else "browser",
+    }
+
+
+@router.post("/transcribe")
+def transcribe(payload: TranscribeIn, user: User = Depends(_student)) -> dict:
+    """Распознать короткую запись на сервере (если включён VOICE_ENABLED=1).
+
+    Аудио живёт только в памяти запроса: не сохраняем на диск и не пишем в БД.
+    """
+    state = speech.status()
+    if not state["available"]:
+        raise HTTPException(503, "Серверное распознавание выключено (нет модели или VOICE_ENABLED=0)")
+    if speech.encoded_size(payload.audio) > speech.MAX_AUDIO_BYTES:
+        raise HTTPException(413, "Слишком длинная запись — говорите короче (до 30 секунд)")
+    audio = speech.decode_base64(payload.audio)
+    if not audio or len(audio) > speech.MAX_AUDIO_BYTES:
+        raise HTTPException(422 if not audio else 413,
+                            "Пустая или битая запись" if not audio
+                            else "Слишком длинная запись — говорите короче (до 30 секунд)")
+    try:
+        result = speech.get_service().transcribe(audio, payload.lang)
+    except ValueError as error:  # не аудио или битый контейнер — виноват не сервер
+        raise HTTPException(422, f"Не удалось прочитать запись: {error}") from error
+    except Exception as error:  # модель не загрузилась и т.п.
+        raise HTTPException(500, f"Не удалось распознать запись: {error}") from error
+    return {"text": result["text"], "language": result["language"], "provider": "whisper"}
 
 
 @router.post("/voice")
@@ -213,6 +275,8 @@ def voice(payload: VoiceIn, db: Session = Depends(get_db),
     run_question_ids = [int(qid) for qid in (loads(run.question_ids, []) or [])]
     if question is None or question.id not in run_question_ids:
         raise HTTPException(404, "Такого вопроса нет в этой попытке")
+    if not (payload.transcript or "").strip():
+        raise HTTPException(422, "Пустая фраза")
 
     decision = choose(payload.transcript, question.voice_options(run.lang))
     order = _orders(run).get(str(question.id)) or list(range(len(question.options["ru"])))
@@ -309,7 +373,7 @@ def results(db: Session = Depends(get_db), user: User = Depends(_student)) -> di
         select(VideoQuizRun)
         .where(VideoQuizRun.user_id == user.id, VideoQuizRun.finished_at.is_not(None))
         .order_by(VideoQuizRun.finished_at.desc())
-        .limit(10)
+        .limit(50)  # история в боковой панели; 50 хватает на семестр
     ).all()
     return {
         "items": [

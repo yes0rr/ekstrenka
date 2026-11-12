@@ -8,8 +8,8 @@
     <thead><tr><th>ФИО</th><th>Почта</th><th>Роль</th><th>Статус</th><th>Группа</th><th>Регистрация</th><th>Действия</th></tr></thead>
     <tbody>
     {% for u in users %}
-      
-        <td data-label="ФИО">{{ u.full_name }}</td>
+        <tr>
+          <td data-label="ФИО">{{ u.full_name }}</td>
         <td class="small mono">{{ u.email }}</td>
         <td data-label="Почта"><span class="tag {{ 'teacher-street' if u.role == 'teacher' else 'info' }}">{{ 'преподаватель' if u.role == 'teacher' else 'учащийся' }}</span></td>
         <td data-label="Роль">{% if u.status == 'active' %}<span class="tag ok">активен</span>{% else %}<span class="tag bad">заблокирован</span>{% endif %}</td>
@@ -33,6 +33,6 @@
 
 {% endblock %}
 {% block scripts %}
-<script src="/static/js/api.js"></script>
-<script src="/static/js/users.js"></script>
+<script src="/static/js/api.js?v=21"></script>
+<script src="/static/js/users.js?v=21"></script>
 {% endblock %}

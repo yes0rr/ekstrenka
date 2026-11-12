@@ -101,5 +101,6 @@ def require_student(user: User = Depends(require_user)) -> User:
 
 def render(request: Request, template: str, user: User | None = None, **context):
     ctx = {"request": request, "user": user}
+    ctx.setdefault("form", {})  # пустая форма по умолчанию: шаблон не упадёт, если её не передали
     ctx.update(context)
     return templates.TemplateResponse(request, template, ctx)
