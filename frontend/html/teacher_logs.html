@@ -13,12 +13,12 @@
     <tbody>
     {% for l in logs %}
         <tr>
-          <td class="mono small">{{ l.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</td>
-        <td data-label="Время"><span class="tag">{{ l.action }}</span></td>
-        <td class="small">{{ l.user.full_name if l.user else '—' }}</td>
-        <td class="small mono">{{ l.entity or '' }}{% if l.entity_id %}#{{ l.entity_id }}{% endif %}</td>
-        <td class="small mono">{{ l.ip or '—' }}</td>
-        <td class="small mono muted">{{ l.payload or '' }}</td>
+          <td data-label="Время" class="mono small">{{ l.created_at.strftime('%d.%m.%Y %H:%M:%S') }}</td>
+        <td data-label="Действие"><span class="tag">{{ l.action }}</span></td>
+        <td data-label="Пользователь" class="small">{{ l.user.full_name if l.user else '—' }}</td>
+        <td data-label="Объект" class="small mono">{{ l.entity or '' }}{% if l.entity_id %}#{{ l.entity_id }}{% endif %}</td>
+        <td data-label="IP" class="small mono">{{ l.ip or '—' }}</td>
+        <td data-label="Данные" class="small mono muted">{{ l.payload or '' }}</td>
       </tr>
     {% endfor %}
     </tbody>

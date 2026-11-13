@@ -10,12 +10,12 @@
     {% for u in users %}
         <tr>
           <td data-label="ФИО">{{ u.full_name }}</td>
-        <td class="small mono">{{ u.email }}</td>
-        <td data-label="Почта"><span class="tag {{ 'teacher-street' if u.role == 'teacher' else 'info' }}">{{ 'преподаватель' if u.role == 'teacher' else 'учащийся' }}</span></td>
-        <td data-label="Роль">{% if u.status == 'active' %}<span class="tag ok">активен</span>{% else %}<span class="tag bad">заблокирован</span>{% endif %}</td>
-        <td class="small">{{ u.group_name or '—' }}</td>
-        <td class="small mono">{{ u.created_at.strftime('%d.%m.%Y') }}</td>
-        <td data-label="Статус">
+        <td data-label="Почта" class="small mono">{{ u.email }}</td>
+        <td data-label="Роль"><span class="tag {{ 'teacher-street' if u.role == 'teacher' else 'info' }}">{{ 'преподаватель' if u.role == 'teacher' else 'учащийся' }}</span></td>
+        <td data-label="Статус">{% if u.status == 'active' %}<span class="tag ok">активен</span>{% else %}<span class="tag bad">заблокирован</span>{% endif %}</td>
+        <td data-label="Группа" class="small">{{ u.group_name or '—' }}</td>
+        <td data-label="Регистрация" class="small mono">{{ u.created_at.strftime('%d.%m.%Y') }}</td>
+        <td data-label="Действия">
           <div class="btn-row">
             <button class="btn ghost small" onclick="patchUser({{ u.id }}, {role: '{{ 'student' if u.role == 'teacher' else 'teacher' }}'})">
               {{ 'Сделать учащимся' if u.role == 'teacher' else 'Сделать преподавателем' }}
@@ -23,6 +23,10 @@
             <button class="btn ghost small" onclick="patchUser({{ u.id }}, {status: '{{ 'blocked' if u.status == 'active' else 'active' }}'})">
               {{ 'Заблокировать' if u.status == 'active' else 'Разблокировать' }}
             </button>
+            {% if u.id != user.id %}
+            <button class="btn danger small" data-user-id="{{ u.id }}" data-user-name="{{ u.full_name }}"
+                    onclick="deleteUser(this)">Удалить</button>
+            {% endif %}
           </div>
         </td>
       </tr>
@@ -33,6 +37,6 @@
 
 {% endblock %}
 {% block scripts %}
-<script src="/static/js/api.js?v=22"></script>
-<script src="/static/js/users.js?v=22"></script>
+<script src="/static/js/api.js?v=24"></script>
+<script src="/static/js/users.js?v=24"></script>
 {% endblock %}

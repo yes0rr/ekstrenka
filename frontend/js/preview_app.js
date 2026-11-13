@@ -648,6 +648,7 @@ function viewRun(user, testId) {
           </div>
           <div class="btn-row" style="margin-top:10px">
             ${test.camera ? '<button class="btn ghost small" id="camBtn" onclick="toggleCamera()">Включить камеру</button>' : ''}
+            ${test.camera ? '<button class="btn ghost small hidden" id="camSwitchBtn" onclick="switchCamera()" title="Переключить на другую камеру">Сменить камеру</button>' : ''}
             ${test.mic ? '<button class="btn ghost small" id="micBtn" onclick="toggleMic()">Включить микрофон</button>' : ''}
           </div>
           <div style="margin-top:12px">
@@ -807,10 +808,59 @@ function updateMediaMeta() {
   el.textContent = `камера ${camStream ? 'вкл' : 'выкл'} · микрофон ${micStream ? 'вкл' : 'выкл'} · ${window.__mediaSeconds || 0} с`;
 }
 
+function stopCamStream(stream) {
+  if (!stream) return;
+  stream.getTracks().forEach((track) => track.stop());
+}
+
+/* задняя камера не зеркалится */
+function camIsRear(stream) {
+  const track = stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
+  if (!track) return false;
+  const settings = track.getSettings ? track.getSettings() : {};
+  if (settings.facingMode) return settings.facingMode === 'environment';
+  return /back|rear|environment|задн/i.test(track.label || '');
+}
+
+/* на телефоне просим заднюю камеру (смотрит на манекен, а не на лицо) */
+async function openDemoCamera(facing) {
+  const wanted = facing === 'user' ? 'user' : 'environment';
+  try {
+    return await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: wanted } } });
+  } catch (error) {
+    const name = (error && error.name) || '';
+    if (name !== 'OverconstrainedError' && name !== 'ConstraintNotSatisfiedError' && name !== 'TypeError') throw error;
+    return navigator.mediaDevices.getUserMedia({ video: true });
+  }
+}
+
+function showCamStream(stream) {
+  camStream = stream;
+  const video = document.getElementById('cam');
+  video.srcObject = camStream;
+  video.classList.toggle('is-rear', camIsRear(camStream));
+  video.classList.remove('hidden');
+  document.getElementById('mediaPlaceholder').classList.add('hidden');
+}
+
+/* кнопка «Сменить камеру» нужна только если камер больше одной */
+async function refreshCamSwitch() {
+  const button = document.getElementById('camSwitchBtn');
+  if (!button) return;
+  let count = 0;
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    count = devices.filter((device) => device.kind === 'videoinput').length;
+  } catch (error) {
+    count = 0;
+  }
+  button.classList.toggle('hidden', !camStream || count < 2);
+}
+
 async function toggleCamera() {
   const button = document.getElementById('camBtn');
   if (camStream) {
-    camStream.getTracks().forEach((track) => track.stop());
+    stopCamStream(camStream);
     camStream = null;
     document.getElementById('cam').classList.add('hidden');
     const placeholder = document.getElementById('mediaPlaceholder');
@@ -818,18 +868,74 @@ async function toggleCamera() {
     placeholder.textContent = 'Камера выключена';
     if (button) button.textContent = 'Включить камеру';
     updateMediaMeta();
+    refreshCamSwitch();
     return;
   }
   try {
-    camStream = await navigator.mediaDevices.getUserMedia({ video: true });
-    const video = document.getElementById('cam');
-    video.srcObject = camStream;
-    video.classList.remove('hidden');
-    document.getElementById('mediaPlaceholder').classList.add('hidden');
+    showCamStream(await openDemoCamera('environment'));
     if (button) button.textContent = 'Выключить камеру';
     updateMediaMeta();
+    refreshCamSwitch();
   } catch (error) {
     document.getElementById('mediaPlaceholder').textContent = 'Нет доступа к камере: ' + error.message;
+  }
+}
+
+/* переключение камер: задняя ↔ фронтальная, при необходимости по deviceId */
+async function switchCamera() {
+  if (!camStream) return;
+  const button = document.getElementById('camSwitchBtn');
+  const camButton = document.getElementById('camBtn');
+  const previous = camStream;
+  const wasRear = camIsRear(previous);
+  const target = wasRear ? 'user' : 'environment';
+  if (button) button.disabled = true;
+  if (camButton) camButton.disabled = true;
+  try {
+    let next;
+    try {
+      next = await openDemoCamera(target);
+    } catch (error) {
+      const name = (error && error.name) || '';
+      if (name !== 'NotReadableError' && name !== 'AbortError' && name !== 'TrackStartError') throw error;
+      stopCamStream(previous);
+      next = await openDemoCamera(target);
+    }
+    if (camIsRear(next) === wasRear) {
+      let inputs = [];
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        inputs = devices.filter((device) => device.kind === 'videoinput');
+      } catch (error) {
+        inputs = [];
+      }
+      const currentId = (previous.getVideoTracks()[0].getSettings() || {}).deviceId;
+      const index = inputs.findIndex((device) => device.deviceId === currentId);
+      const candidate = inputs.length > 1 ? inputs[(index + 1) % inputs.length] : null;
+      if (candidate && candidate.deviceId && candidate.deviceId !== currentId) {
+        stopCamStream(next);
+        next = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: candidate.deviceId } } });
+      }
+    }
+    stopCamStream(previous);
+    showCamStream(next);
+    updateMediaMeta();
+  } catch (error) {
+    try {
+      stopCamStream(camStream);
+      showCamStream(await openDemoCamera(wasRear ? 'environment' : 'user'));
+      updateMediaMeta();
+    } catch (fallbackError) {
+      camStream = null;
+      document.getElementById('cam').classList.add('hidden');
+      document.getElementById('mediaPlaceholder').textContent =
+        'Не удалось переключить камеру: ' + (error && error.message ? error.message : 'неизвестная ошибка');
+      updateMediaMeta();
+    }
+  } finally {
+    if (button) button.disabled = false;
+    if (camButton) camButton.disabled = false;
+    refreshCamSwitch();
   }
 }
 
@@ -1036,6 +1142,7 @@ function viewUsers(user) {
           <td><div class="btn-row">
             <button class="btn ghost small" onclick="patchUser(${u.id},'role')">${u.role === 'teacher' ? 'Сделать учащимся' : 'Сделать преподавателем'}</button>
             <button class="btn ghost small" onclick="patchUser(${u.id},'status')">${u.status === 'active' ? 'Заблокировать' : 'Разблокировать'}</button>
+            ${u.id !== user.id ? '<button class="btn danger small" onclick="deleteUser(' + u.id + ')">Удалить</button>' : ''}
           </div></td>
         </tr>`).join('')}</tbody></table>
     </div>`);
@@ -1053,6 +1160,25 @@ function patchUser(userId, field) {
   }
   saveDB();
   logAction('user_updated', target.email);
+  router();
+}
+
+function deleteUser(userId) {
+  const target = userById(userId);
+  const me = currentUser();
+  if (!target) return;
+  if (target.id === me.id) { alert('Нельзя удалить самого себя'); return; }
+  if (!confirm('Удалить пользователя «' + target.fullName + '»?\n\n' +
+    'Вместе с ним удалятся его испытания, попытки и результаты.\n' +
+    'Это действие необратимо.')) return;
+
+  const ownTests = DB.tests.filter((t) => t.authorId === userId).map((t) => t.id);
+  DB.attempts = DB.attempts.filter((a) => a.studentId !== userId && !ownTests.includes(a.testId));
+  DB.tests = DB.tests.filter((t) => t.authorId !== userId);
+  DB.users = DB.users.filter((u) => u.id !== userId);
+  DB.logs.forEach((l) => { if (l.userId === userId) l.userId = null; });
+  saveDB();
+  logAction('user_deleted', target.email);
   router();
 }
 

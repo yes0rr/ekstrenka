@@ -9,7 +9,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.orm import Session, selectinload
 
 from ..db import get_db
@@ -25,6 +25,7 @@ from ..models import (
     SubjectType,
     Test,
     User,
+    VideoQuizRun,
     utcnow,
 )
 from ..neural import evaluate_attempt
@@ -612,3 +613,38 @@ def patch_user(user_id: int, payload: UserPatch, request: Request, db: Session =
     write_log(db, "user_updated", request=request, user_id=user.id, entity="user", entity_id=target.id,
               payload=changes)
     return {"ok": True}
+
+
+@router.delete("/users/{user_id}", status_code=204)
+def delete_user(user_id: int, request: Request, db: Session = Depends(get_db),
+                user: User = Depends(require_teacher)):
+    """Удалить пользователя вместе с его данными.
+
+    Себя удалять нельзя — иначе преподаватель останется без входа. Вместе с
+    учащимся уходят его попытки и ответы, вместе с преподавателем — его
+    испытания и вопросы. Логи сохраняются, но без ссылки на пользователя.
+    """
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(404, "Пользователь не найден")
+    if target.id == user.id:
+        raise HTTPException(400, "Нельзя удалить самого себя")
+
+    payload = {"email": target.email, "full_name": target.full_name, "role": target.role}
+    own_tests = select(Test.id).where(Test.author_id == user_id)
+    own_attempts = or_(Attempt.student_id == user_id, Attempt.test_id.in_(own_tests))
+    attempt_ids = select(Attempt.id).where(own_attempts)
+
+    # удаляем явно, не полагаясь на ON DELETE CASCADE: в SQLite внешние ключи
+    # по умолчанию не включены и оставили бы «осиротевшие» строки
+    db.execute(delete(Answer).where(Answer.attempt_id.in_(attempt_ids)))
+    db.execute(delete(Attempt).where(own_attempts))
+    db.execute(delete(VideoQuizRun).where(VideoQuizRun.user_id == user_id))
+    db.execute(delete(Question).where(Question.test_id.in_(own_tests)))
+    db.execute(delete(Test).where(Test.author_id == user_id))
+    db.execute(update(Log).where(Log.user_id == user_id).values(user_id=None))
+    db.delete(target)
+    db.commit()
+
+    write_log(db, "user_deleted", request=request, user_id=user.id, entity="user", entity_id=user_id,
+              payload=payload)

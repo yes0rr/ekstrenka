@@ -152,3 +152,39 @@ def test_question_cannot_be_unanswerable(teacher):
     # правка вопроса проверяется так же
     qid = ok.json()["id"]
     assert teacher.patch(f"/api/questions/{qid}", json={"text": "Правка", "kind": "single"}).status_code == 422
+
+
+def test_teacher_deletes_user_with_data(teacher, student):
+    """Удаление пользователя убирает его попытки и ответы, но не чужие испытания."""
+    victim = TestClient(app)
+    reg = victim.post("/api/auth/register", json={
+        "email": "delete-me@test.ru", "full_name": "Удаляемый", "password": "secret123", "role": "student",
+    })
+    assert reg.status_code == 200
+    victim_id = reg.json()["id"]
+
+    test_id = teacher.post("/api/tests", json={"title": "Для удаления", "mode": "testing"}).json()["id"]
+    qid = teacher.post(
+        f"/api/tests/{test_id}/questions",
+        json={"text": "2+2?", "kind": "single", "options": ["3", "4"], "correct": "4"},
+    ).json()["id"]
+    teacher.patch(f"/api/tests/{test_id}", json={"is_published": True})
+
+    attempt_id = victim.post("/api/attempts", json={"test_id": test_id}).json()["id"]
+    victim.post(f"/api/attempts/{attempt_id}/answers", json={"question_id": qid, "value": "4"})
+
+    # учащийся удалять пользователей не может
+    assert student.delete(f"/api/users/{victim_id}").status_code == 403
+
+    assert teacher.delete(f"/api/users/{victim_id}").status_code == 204
+    assert all(u["id"] != victim_id for u in teacher.get("/api/users").json())
+    # попытка и ответы удалены вместе с пользователем
+    assert teacher.get(f"/api/attempts/{attempt_id}").status_code == 404
+    # испытание преподавателя осталось на месте
+    assert teacher.get(f"/api/tests/{test_id}").status_code == 200
+    assert any(item["action"] == "user_deleted" for item in teacher.get("/api/logs").json())
+
+
+def test_teacher_cannot_delete_self(teacher):
+    me = teacher.get("/api/me").json()
+    assert teacher.delete(f"/api/users/{me['id']}").status_code == 400

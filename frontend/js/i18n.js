@@ -207,6 +207,8 @@
     "Микрофон": "Microphone",
     "Включить камеру": "Turn camera on",
     "Выключить камеру": "Turn camera off",
+    "Сменить камеру": "Switch camera",
+    "Переключить на другую камеру": "Switch to another camera",
     "Включить микрофон": "Turn microphone on",
     "Камера выключена": "Camera is off",
     "Нажмите «Включить камеру» и разрешите доступ в браузере.":

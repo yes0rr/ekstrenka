@@ -76,6 +76,7 @@
       </div>
       <div class="btn-row" style="margin-top:10px">
         {% if test.use_camera %}<button class="btn ghost small" id="camBtn" onclick="toggleCamera()">Включить камеру</button>{% endif %}
+        {% if test.use_camera %}<button class="btn ghost small hidden" id="camSwitchBtn" onclick="switchCamera()" title="Переключить на другую камеру">Сменить камеру</button>{% endif %}
         {% if test.use_mic %}<button class="btn ghost small" id="micBtn" onclick="toggleMic()">Включить микрофон</button>{% endif %}
       </div>
       <div style="margin-top:12px">
@@ -132,7 +133,7 @@
 {% endblock %}
 {% block scripts %}
 <script id="run-config" type="application/json">{"testId": {{ test.id }}, "mode": "{{ test.mode }}", "total": {{ test.questions|length }}}</script>
-<script src="/static/js/api.js?v=22"></script>
-<script src="/static/js/cpr_stream.js?v=22"></script>
-<script src="/static/js/student_run.js?v=22"></script>
+<script src="/static/js/api.js?v=24"></script>
+<script src="/static/js/cpr_stream.js?v=24"></script>
+<script src="/static/js/student_run.js?v=24"></script>
 {% endblock %}
