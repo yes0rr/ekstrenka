@@ -12,7 +12,7 @@
 (function () {
   var state = {
     sections: [], run: null, answers: {}, mode: 'training', finished: false,
-    voiceMode: 'none', voices: []
+    voiceMode: 'none', voices: [], sectionKey: null
   };
 
   function el(tag, cls, text) {
@@ -53,6 +53,17 @@
 
   /* ---------------------------- каталог разделов ---------------------------- */
 
+  /* «1 вопрос», «2 вопроса», «6 вопросов» — чтобы на карточке не стояло «2 вопросов» */
+  function questionsWord(count) {
+    if (lang() === 'en') return t('вопросов');
+    const ten = count % 100;
+    const one = count % 10;
+    if (ten >= 11 && ten <= 14) return t('вопросов');
+    if (one === 1) return t('вопрос');
+    if (one >= 2 && one <= 4) return t('вопроса');
+    return t('вопросов');
+  }
+
   function renderCatalog() {
     const catalog = document.getElementById('catalog');
     if (!catalog) return;
@@ -68,20 +79,30 @@
       img.alt = '';
       img.loading = 'lazy';
       cover.appendChild(img);
-      const parts = [];
-      if (section.own && section.own < section.run_size) parts.push(t('по теме:') + ' ' + section.own);
-      cover.appendChild(el('span', 'quiz-tile-badge', section.run_size + ' ' + t('вопросов')));
+      /* на карточке — просто число вопросов этого раздела («6 вопросов»);
+         «из скольких» учащийся видит уже в заходе: «Вопрос 1 из 6» */
+      const own = section.own || section.run_size;
+      cover.appendChild(el('span', 'quiz-tile-badge', own + ' ' + questionsWord(own)));
       card.appendChild(cover);
 
       const body = el('div', 'quiz-tile-body');
       body.appendChild(el('div', 'quiz-tile-title', section.title));
       body.appendChild(el('div', 'quiz-tile-desc muted small', section.description));
-      if (parts.length) body.appendChild(el('div', 'quiz-tile-meta muted small', parts.join(' · ')));
+      const again = state.sectionKey === section.key;
       body.appendChild(el('span', 'quiz-tile-start',
-        state.mode === 'training' ? t('Начать обучение') : t('Начать зачёт')));
+        again ? t('Открыть снова')
+              : (state.mode === 'training' ? t('Начать обучение') : t('Начать зачёт'))));
       card.appendChild(body);
 
-      card.addEventListener('click', function () { startRun(section.key); });
+      // выбранный раздел остаётся подсвеченным, чтобы было видно, откуда пришли
+      card.classList.toggle('is-active', state.sectionKey === section.key);
+      card.addEventListener('click', function () {
+        state.sectionKey = section.key;
+        catalog.querySelectorAll('.quiz-tile').forEach(function (tile) {
+          tile.classList.toggle('is-active', tile.dataset.section === section.key);
+        });
+        startRun(section.key);
+      });
       catalog.appendChild(card);
     });
   }
@@ -101,9 +122,7 @@
       document.getElementById('runArea').hidden = false;
       document.getElementById('resultPanel').hidden = true;
       const section = state.sections.find(function (s) { return s.key === sectionKey; });
-      document.getElementById('runTitle').textContent =
-        (section ? section.title : '') + ' · ' +
-        (data.mode === 'training' ? t('обучение') : t('зачёт'));
+      document.getElementById('runTitle').textContent = section ? section.title : '';
       document.getElementById('modeBadge').textContent =
         data.mode === 'training' ? t('Обучение') : t('Зачёт');
       document.getElementById('modeBadge').className =
@@ -112,10 +131,18 @@
       document.getElementById('finishBtn').disabled = false;
       document.getElementById('finishBtn').textContent = t('Завершить и увидеть разбор');
       renderQuestions();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollToRun();
     } catch (error) {
       alert(error.message);
     }
+  }
+
+  /* прокрутка к началу захода: шапка сайта закреплена, поэтому прокручиваем не в самый верх,
+     иначе панель «Отвечено 0/20» уезжает под неё. Отступ задан в CSS (#runArea scroll-margin-top). */
+  function scrollToRun() {
+    const runArea = document.getElementById('runArea');
+    if (!runArea) return;
+    runArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function renderQuestions() {
@@ -377,6 +404,8 @@
     document.getElementById('catalog').hidden = false;
     renderCatalog();
     loadHistory();
+    const top = document.getElementById('modePanel') || document.getElementById('catalog');
+    if (top) top.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   /* ---------------------------- история ---------------------------- */
@@ -430,11 +459,11 @@
     if (!window.VideoVoice || !window.VideoVoice.secure()) {
       hint.textContent = t('Голосовой ответ работает только по https — на этом адресе он недоступен. Введите ответ текстом.');
     } else if (state.voiceMode === 'none') {
-      hint.textContent = t('Голосовой ответ в этом браузере недоступен. Введите ответ текстом.');
+      hint.textContent = t('Голосовой ответ недоступен в этом браузере — введите ответ текстом.');
     } else if (state.voiceMode === 'server') {
       hint.textContent = t('Голосовой ответ: нажмите кнопку и говорите — запись распознаётся на нашем сервере и никуда не сохраняется.');
     } else {
-      hint.textContent = t('Голосовой ответ: распознаёт браузер (Chrome, Edge). Если не работает — включите распознавание на сервере.');
+      hint.textContent = t('Голосовой ответ: нажмите кнопку и говорите — распознаёт браузер. Если не сработает, введите ответ текстом.');
     }
   }
 

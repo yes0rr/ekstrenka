@@ -11,7 +11,7 @@ from pathlib import Path
 
 HTML = Path(__file__).resolve().parents[2] / "frontend" / "html"
 ASSET = re.compile(r'(?:src|href)="(/static/(?:js|css)/[^"]+)"')
-CURRENT = "21"
+CURRENT = "22"
 
 
 def test_every_script_and_style_has_version():

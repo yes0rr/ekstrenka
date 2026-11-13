@@ -138,7 +138,7 @@ def _resolve(run: VideoQuizRun, question, payload: AnswerIn) -> tuple[int | None
 @router.get("/sections")
 def sections(lang: Lang = "ru", user: User = Depends(_student)) -> dict:
     """Разделы видеотеста: картинка, описание, сколько вопросов."""
-    return {"total": TOTAL, "run_size": RUN_SIZE, "items": [s.public(lang) for s in SECTIONS]}
+    return {"total": TOTAL, "items": [s.public(lang) for s in SECTIONS]}
 
 
 @router.post("/start")

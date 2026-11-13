@@ -634,6 +634,17 @@ html[data-theme="light"][data-accent="graphite"] { --accent: #4b5566; --accent-2
   padding: 10px; color: var(--text); font: inherit; transition: border-color .15s ease, transform .15s ease;
 }
 .quiz-tile:hover { border-color: var(--accent, #4d8dff); transform: translateY(-1px); }
+.quiz-tile.is-active {
+  border-color: var(--accent, #4d8dff);
+  box-shadow: inset 0 0 0 2px var(--accent, #4d8dff);
+  background: rgba(77, 141, 255, .08);
+}
+.quiz-tile.is-active .quiz-tile-start { font-weight: 600; }
+/* при выборе раздела страница прокручивается к вопросам, но не под закреплённую шапку */
+#modePanel { scroll-margin-top: 76px; }
+#runArea { scroll-margin-top: 76px; }
+#catalog { scroll-margin-top: 76px; }
+.quiz-card { scroll-margin-top: 160px; }
 .quiz-tile-cover { position: relative; flex: 0 0 132px; }
 .quiz-tile-cover img {
   width: 132px; height: 84px; object-fit: cover; border-radius: 8px; display: block;

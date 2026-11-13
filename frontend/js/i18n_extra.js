@@ -216,7 +216,19 @@
 
     "по теме: ": "on topic: ",
     "по теме:": "on topic:",
+    "из": "of",
+    "в заходе": "per run",
+    "Открыть снова": "Open again",
+    "Голосовой ответ: нажмите кнопку и говорите — распознаёт браузер. Если не сработает, введите ответ текстом.":
+      "Voice answer: press the button and speak — recognised by the browser. If it fails, type your answer.",
+    "Голосовой ответ сейчас недоступен — введите ответ текстом.":
+      "Voice answer is not available right now — please type your answer.",
+    "Голосовой ответ недоступен в этом браузере — введите ответ текстом.":
+      "Voice answer is not available in this browser — please type your answer.",
+
     "вариантов нет — отвечаете текстом или голосом": "no options — answer by typing or speaking",
+    "вопрос": "question",
+    "вопроса": "questions",
     "вопросов": "questions",
     "Готовлю микрофон…": "Preparing the microphone…",
     "Слушаю… говорите ответ": "Listening… say your answer",

@@ -48,31 +48,32 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         id=1,
         clip="01_pulseox",
         title={
-            "ru": "Врач работает с кистью пациента",
-            "en": "The doctor works with the patient's hand",
+            "ru": "Монитор у кушетки: SpO₂ 88 %",
+            "en": "The monitor by the couch shows SpO2 88 %",
         },
         question={
-            "ru": "Что делает врач на этом фрагменте?",
-            "en": "What is the doctor doing in this clip?",
+            "ru": "Какой показатель на мониторе даёт пульсоксиметрия?",
+            "en": "Which reading on the monitor comes from pulse oximetry?",
         },
         options={
             "ru": (
-                "Измеряет артериальное давление",
-                "Обеспечивает пульсоксиметрию для оценки сатурации",
-                "Регистрирует ЭКГ в 12 отведениях",
-                "Оценивает симптом «белого пятна»",
+                "Артериальное давление",
+                "Сатурация (SpO₂) — насыщение крови кислородом",
+                "Частота сердечных сокращений по ЭКГ",
+                "Температура тела",
             ),
             "en": (
-                "Measures blood pressure",
-                "Applies pulse oximetry to assess saturation",
-                "Records a 12-lead ECG",
-                "Checks the capillary refill (white spot) sign",
+                "Blood pressure",
+                "Saturation (SpO2) — blood oxygen level",
+                "Heart rate from the ECG",
+                "Body temperature",
             ),
         },
         correct=1,
         explain={
-            "ru": "Датчик на палец — это пульсоксиметрия. По паспорту станции она входит "
-                  "в оценку дыхания (B): сначала сатурация, затем частота дыхания за 10 секунд.",
+            "ru": "88 % на мониторе — это SpO₂, её даёт пульсоксиметр (датчик на пальце). "
+                  "По паспорту станции сатурация входит в оценку дыхания (B): сначала она, "
+                  "затем частота дыхания за 10 секунд.",
             "en": "A finger probe means pulse oximetry. In the station passport it belongs to "
                   "the breathing step (B): saturation first, then respiratory rate for 10 seconds.",
         },
@@ -80,15 +81,17 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         triggers={
             "ru": (
                 ("давление", "тонометр", "тонометром", "ад"),
-                ("пульсоксиметр", "пульсоксиметрия", "сатурация", "датчик", "палец", "оксигенация"),
-                ("экг", "кардиограмм", "электрод", "12 отведен"),
-                ("белое пятно", "белого пятна", "симптом белого"),
+                ("сатурация", "сатурацию", "сатурации", "сатурацией",
+                 "пульсоксиметр", "пульсоксиметрия", "пульсоксиметром",
+                 "насыщение кислородом", "насыщения", "spo2"),
+                ("частота сердечных", "чсс", "пульс по экг"),
+                ("температура", "термометр"),
             ),
             "en": (
                 ("blood pressure", "tonometer", "pressure cuff"),
-                ("pulse oximetry", "oximeter", "saturation", "finger", "spo2"),
-                ("ecg", "electrocardiogram", "electrodes", "12 lead"),
-                ("white spot", "capillary refill", "refill"),
+                ("saturation", "spo2", "pulse oximetry", "oximeter", "oxygen level"),
+                ("heart rate", "hr from ecg"),
+                ("temperature", "thermometer"),
             ),
         },
     ),
@@ -144,8 +147,8 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         id=3,
         clip="03_call_smp",
         title={
-            "ru": "Врач говорит по телефону, помощница продолжает работу",
-            "en": "The doctor is on the phone, the assistant keeps working",
+            "ru": "Помощница вызывает скорую по телефону, врач у пациента",
+            "en": "The assistant calls the ambulance, the doctor stays with the patient",
         },
         question={
             "ru": "Что обязательно должно прозвучать в вызове скорой помощи?",
@@ -194,8 +197,8 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         id=4,
         clip="04_arrest",
         title={
-            "ru": "Врач наклоняется к пациенту, затем выпрямляется и даёт команду",
-            "en": "The doctor leans over the patient, straightens up and gives an order",
+            "ru": "Помощница проверяет дыхание, врач стоит рядом",
+            "en": "The assistant checks breathing while the doctor stands by",
         },
         question={
             "ru": "Что достаточно для констатации остановки кровообращения?",
@@ -242,8 +245,8 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         id=5,
         clip="05_aed_on",
         title={
-            "ru": "Помощница включает аппарат, врач накладывает электроды",
-            "en": "The assistant switches the device on, the doctor applies the pads",
+            "ru": "АНД открыт рядом с пациентом, врач накладывает электроды",
+            "en": "The AED is open by the patient, the doctor applies the pads",
         },
         question={
             "ru": "Когда включают автоматический наружный дефибриллятор?",
@@ -293,12 +296,12 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         id=6,
         clip="06_aed_rhythm",
         title={
-            "ru": "Врач поднимает руки и отводит всех от кушетки",
-            "en": "The doctor raises his hands and waves everyone away from the couch",
+            "ru": "Помощница поднимает руки и отводит всех от кушетки",
+            "en": "The assistant raises her hands and waves everyone away from the couch",
         },
         question={
-            "ru": "Зачем врач поднимает руки и просит всех отойти?",
-            "en": "Why does the doctor raise his hands and ask everyone to step back?",
+            "ru": "Зачем поднимают руки и просят всех отойти от кушетки?",
+            "en": "Why do they raise their hands and ask everyone to step back?",
         },
         options={
             "ru": (
@@ -390,8 +393,8 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         id=8,
         clip="08_vent",
         title={
-            "ru": "Врач и помощница работают вдвоём у кушетки",
-            "en": "The doctor and the assistant work together at the couch",
+            "ru": "Компрессии и вентиляция мешком — спасатели работают вдвоём",
+            "en": "Compressions and bag ventilation, two rescuers working together",
         },
         question={
             "ru": "Какое соотношение компрессий грудной клетки и вдохов правильное?",
@@ -409,7 +412,8 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         triggers={
             "ru": (
                 ("15 на 2", "15 к 2", "пятнадцать на два"),
-                ("30 на 2", "30 к 2", "тридцать на два", "тридцать к двум"),
+                ("30 на 2", "30 к 2", "тридцать на два", "тридцать к двум",
+                 "тридцать два"),
                 ("5 на 1", "пять на один"),
                 ("10 на 2", "десять на два"),
             ),
@@ -475,11 +479,11 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         id=10,
         clip="02_ekg",
         title={
-            "ru": "Плёнка ЭКГ снята, врач смотрит на запись",
+            "ru": "Электроды наложены, идёт запись ЭКГ",
             "en": "The ECG is recorded, the doctor looks at the trace",
         },
         question={
-            "ru": "Что обязательно сделать сразу после записи ЭКГ?",
+            "ru": "ЭКГ записана. Что обязательно сделать сразу после записи?",
             "en": "What must be done right after recording the ECG?",
         },
         options={
@@ -523,8 +527,8 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         id=11,
         clip="03_call_smp",
         title={
-            "ru": "Врач с телефоном у кушетки, помощница рядом",
-            "en": "The doctor with the phone at the couch, the assistant nearby",
+            "ru": "Помощница с телефоном у кушетки, врач рядом",
+            "en": "The assistant with the phone at the couch, the doctor nearby",
         },
         question={
             "ru": "Когда сообщают предполагаемый диагноз диспетчеру скорой?",
@@ -571,8 +575,8 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         id=12,
         clip="01_pulseox",
         title={
-            "ru": "Врач надевает датчик и смотрит на монитор",
-            "en": "The doctor applies the probe and looks at the monitor",
+            "ru": "Показания монитора ниже нормы — решают про кислород",
+            "en": "The readings are below normal, so oxygen is discussed",
         },
         question={
             "ru": "Когда по алгоритму проводят кислородотерапию?",
@@ -619,8 +623,8 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         id=13,
         clip="04_arrest",
         title={
-            "ru": "Врач выпрямился и подаёт команду помощнице",
-            "en": "The doctor straightens up and gives the assistant an order",
+            "ru": "После проверки дыхания звучит команда начать компрессии",
+            "en": "After the breathing check the order is given to start compressions",
         },
         question={
             "ru": "За сколько секунд нужно начать компрессии грудной клетки?",
@@ -715,8 +719,8 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         id=15,
         clip="06_aed_rhythm",
         title={
-            "ru": "Повторная команда АНД, врач отводит руки",
-            "en": "Repeated AED prompt, the doctor pulls his hands away",
+            "ru": "Повторная команда АНД: руки в стороны, к пациенту не прикасаются",
+            "en": "Repeated AED prompt: hands away, nobody touches the patient",
         },
         question={
             "ru": "Что делают по повторной команде АНД?",
@@ -811,8 +815,8 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
         id=17,
         clip="08_vent",
         title={
-            "ru": "Двое спасателей работают у кушетки",
-            "en": "Two rescuers working at the couch",
+            "ru": "Смена спасателей у кушетки во время реанимации",
+            "en": "The rescuers swap places at the couch during resuscitation",
         },
         question={
             "ru": "Как часто спасатели меняются местами при реанимации?",
@@ -953,10 +957,10 @@ QUESTIONS: tuple[VideoQuestion, ...] = (
     ),
     VideoQuestion(
         id=20,
-        clip="04_arrest",
+        clip="01_pulseox",
         title={
-            "ru": "Врач у кушетки с помощницей, рядом укладка",
-            "en": "The doctor at the couch with the assistant, the kit nearby",
+            "ru": "Осмотр доходит до неврологического статуса",
+            "en": "The examination goes step by step, down to the neurological status",
         },
         question={
             "ru": "Что входит в шаг D — неврологический статус?",
@@ -1005,8 +1009,9 @@ TOTAL = len(QUESTIONS)
 
 # ----------------------------- разделы видеотеста -----------------------------
 # Каждый раздел — мини-подборка по теме станции: картинка (постер фрагмента),
-# короткое описание и набор вопросов. В заходе ВСЕГДА RUN_SIZE вопросов (= весь банк):
-# если в разделе вопросов меньше, добираем остальные, чтобы заход был одинаковым по длине.
+# короткое описание и набор вопросов. Длина захода = столько вопросов, сколько в разделе:
+# «Все разделы» — все 20, узкий раздел — только свои (6, 4, 2 …). Ничего не добираем,
+# чтобы на карточке стояло честное число, а в заходе было «1 из 6», а не «1 из 20».
 RUN_SIZE = TOTAL
 
 
@@ -1025,8 +1030,8 @@ class Section:
             "title": self.title[lang],
             "description": self.description[lang],
             "cover": self.cover,
-            "own": len(self.question_ids),      # сколько вопросов именно по теме раздела
-            "run_size": min(RUN_SIZE, TOTAL),   # сколько будет в заходе (добираем из общего банка)
+            "own": len(self.question_ids),                 # сколько вопросов в разделе
+            "run_size": min(len(self.question_ids), TOTAL),  # столько же будет в заходе
             "total": TOTAL,
         }
 
@@ -1122,22 +1127,20 @@ def verdict(percent: float, lang: str = "ru") -> tuple[str, str]:
     return "bad", table[-1][2]
 
 
-def pick_questions(section_key: str = "all", count: int = RUN_SIZE,
+def pick_questions(section_key: str = "all", count: int | None = None,
                    rng=None) -> list[VideoQuestion]:
-    """Случайная подборка вопросов раздела: каждый заход — новый набор и новый порядок."""
+    """Вопросы раздела в случайном порядке: каждый заход — новый порядок.
+
+    count=None — берём весь раздел (столько вопросов, сколько в нём есть).
+    Чужие вопросы не подмешиваем: у раздела «Вызов СМП» заход из 2 вопросов, у «Все разделы» — из 20.
+    """
     import random
 
     rng = rng or random
     section = SECTION_BY_KEY.get(section_key) or SECTION_BY_KEY["all"]
     own = [q for q in (by_id(qid) for qid in section.question_ids) if q is not None]
     rng.shuffle(own)
-    picked = own[:count]
-    if len(picked) < count:
-        # в разделе меньше вопросов, чем нужно на заход — добираем остальными
-        rest = [q for q in QUESTIONS if q not in picked]
-        rng.shuffle(rest)
-        picked += rest[:count - len(picked)]
-    return picked
+    return own if count is None else own[:count]
 
 
 def option_order(question: VideoQuestion, rng=None) -> list[int]:

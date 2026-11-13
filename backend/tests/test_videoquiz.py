@@ -71,7 +71,6 @@ def test_sections_catalog():
     with _student_client() as client:
         payload = client.get("/api/video-quiz/sections").json()
         assert payload["total"] == TOTAL
-        assert payload["run_size"] == RUN_SIZE
         keys = [item["key"] for item in payload["items"]]
         assert keys[0] == "all"
         assert len(keys) == len(SECTIONS) >= 5
@@ -79,7 +78,7 @@ def test_sections_catalog():
             assert item["title"] and item["description"] and item["cover"]
             assert item["cover"]  # картинка карточки — постер существующего фрагмента
             assert 1 <= item["run_size"] <= RUN_SIZE
-            assert item["run_size"] <= item["total"]
+            assert item["run_size"] == item["own"], "в заходе ровно столько же, сколько в разделе"
 
         english = client.get("/api/video-quiz/sections?lang=en").json()
         assert english["items"][0]["title"] == "All sections"
@@ -87,7 +86,7 @@ def test_sections_catalog():
 
 def test_start_gives_ten_random_questions_without_answers():
     with _student_client() as client:
-        first = _start(client)
+        first = _start(client, section="all")
         assert len(first["items"]) == RUN_SIZE
         assert first["total"] == RUN_SIZE
         assert first["run_id"] > 0
@@ -115,18 +114,22 @@ def test_start_shuffles_questions_and_options():
         assert sorted(item["options"]) == sorted(question.options["ru"])
 
 
-def test_every_run_has_all_questions():
-    """В любом разделе заход длится одинаково: 20 вопросов (свои + добранные)."""
+def test_run_length_equals_section_size():
+    """Заход длится столько вопросов, сколько в разделе: «3 из 20» не показываем, чужие не подмешиваем."""
     with _student_client() as client:
         run = _start(client, section="call")
-        assert len(run["items"]) == TOTAL == RUN_SIZE == 20
+        assert len(run["items"]) == 2 == run["total"]
         ids = {item["id"] for item in run["items"]}
-        assert {3, 11} <= ids, "вопросы раздела должны быть в заходе"
+        assert ids == {3, 11}, "в узком разделе только его вопросы"
         assert run["section"] == "call"
 
         wide = _start(client, section="all")
-        assert len(wide["items"]) == TOTAL
+        assert len(wide["items"]) == TOTAL == RUN_SIZE == 20
         assert len({item["id"] for item in wide["items"]}) == TOTAL
+
+        for key, size in (("exam", 6), ("cpr", 7), ("airway", 4)):
+            narrow = _start(client, section=key)
+            assert len(narrow["items"]) == size == narrow["total"]
 
 
 def test_start_in_english():

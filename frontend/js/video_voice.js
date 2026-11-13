@@ -241,7 +241,9 @@
           done = true;
           state.busy = false;
           setButton(options.label(), false);
-          status.textContent = options.t('Браузер не может распознать речь — включите распознавание на сервере (VOICE_ENABLED=1) или введите ответ текстом.');
+          // браузер не смог распознать (часто Chrome без сервисов Google) —
+          // студенту без технических подробностей
+          status.textContent = options.t('Голосовой ответ сейчас недоступен — введите ответ текстом.');
           return;
         }
         finish();
