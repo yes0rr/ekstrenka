@@ -15,7 +15,7 @@
 
 ## 1. Залить код на GitHub
 
-1. Распакуйте `ekstrenka_v21_2026-11-11.zip` → внутри папка `project`.
+1. Распакуйте `ekstrenka_v22_2026-11-13.zip` → внутри папка `project`.
 2. Откройте https://github.com/yes0rr/ekstrenka
 3. **Add file → Upload files**.
 4. Откройте папку `project`, выделите всё (Ctrl+A) и перетащите в окно браузера.
