@@ -15,7 +15,7 @@
 
 ## 1. Залить код на GitHub
 
-1. Распакуйте `ekstrenka_v22_2026-11-13.zip` → внутри папка `project`.
+1. Распакуйте `ekstrenka_v25_2026-11-15.zip` → внутри папка `project`.
 2. Откройте https://github.com/yes0rr/ekstrenka
 3. **Add file → Upload files**.
 4. Откройте папку `project`, выделите всё (Ctrl+A) и перетащите в окно браузера.
@@ -218,6 +218,68 @@ apt-get install -y libgl1 libglib2.0-0
 ```
 /opt/ispytaniya/.venv/bin/pip install mediapipe opencv-python-headless numpy
 ```
+
+---
+
+## 5.0. Нейросети на сервере (две штуки, обе необязательные)
+
+Обе работают на процессоре, бесплатно, интернет нужен только один раз — скачать файлы моделей.
+
+### 5.0.1. Распознавание речи (Whisper) — чтобы работал голосовой ответ
+
+Три команды по одной строке:
+
+```
+cd /opt/ispytaniya && .venv/bin/pip install -r requirements-voice.txt
+```
+```
+cd /opt/ispytaniya && .venv/bin/python tools/download_voice_model.py
+```
+```
+printf 'VOICE_ENABLED=1\nWHISPER_MODEL=base\n' >> /opt/ispytaniya/.env && systemctl restart ispytaniya
+```
+
+Проверка (должно быть `available: True`):
+
+```
+cd /opt/ispytaniya && .venv/bin/python -c "from backend.app import speech; print(speech.status())"
+```
+
+Мало памяти (2 ГБ)? Возьмите `tiny` вместо `base`: 75 МБ и ~250 МБ в памяти вместо 145 МБ и ~500 МБ.
+
+### 5.0.2. Проверка ответа по смыслу (маленькая модель, ONNX)
+
+Нужна только тогда, когда студент отвечает совсем своими словами. Без неё ответы проверяются правилами.
+
+```
+cd /opt/ispytaniya && .venv/bin/pip install -r requirements-semantic.txt
+```
+```
+cd /opt/ispytaniya && .venv/bin/python tools/download_semantic_model.py
+```
+```
+printf 'SEMANTIC_EMBEDDINGS=1\n' >> /opt/ispytaniya/.env && systemctl restart ispytaniya
+```
+
+Проверка:
+
+```
+cd /opt/ispytaniya && .venv/bin/python -c "from backend.app import semantic_onnx; print(semantic_onnx.status())"
+```
+
+Модель: paraphrase-multilingual-MiniLM-L12-v2 (int8) — 113 МБ + токенизатор 16 МБ, ~300 МБ в памяти,
+20 мс на фразу, torch не нужен (onnxruntime). Понимает и русский, и английский.
+
+### 5.0.3. Сколько это ест (на 2 ГБ памяти)
+
+| Что включено | Память | Когда ставить |
+|---|---|---|
+| ничего | ~250 МБ | хватает для групп до 10 человек |
+| + Whisper tiny | ~500 МБ | нужен голосовой ответ |
+| + Whisper base | ~750 МБ | голос должен быть точнее |
+| + смысловая модель | ещё ~300 МБ | вольные формулировки ответов |
+
+Whisper base и смысловая модель вместе на 2 ГБ лучше не держать — либо `tiny`, либо по очереди.
 
 ---
 

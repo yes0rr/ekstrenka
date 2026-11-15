@@ -1,0 +1,6 @@
+# Сравнение смысла ответа и эталона маленькой моделью (необязательно)
+# Установка: pip install -r requirements-semantic.txt
+# Модель качается отдельно: python tools/download_semantic_model.py  (113 МБ, ONNX, CPU, без torch)
+onnxruntime>=1.17
+tokenizers>=0.15
+numpy>=1.24
