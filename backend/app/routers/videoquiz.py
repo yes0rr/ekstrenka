@@ -1,16 +1,14 @@
-"""API видеотеста: разделы → заход → ответы (вариант или свободный текст/голос) → итог.
+"""API видеотеста «Экстренка»: разделы → тест → ответы словами → итог.
 
-Одна попытка = одна строка в video_quiz_runs, создаётся при старте:
-    POST /start   — какие 10 вопросов достались (случайно) и в каком порядке;
-    POST /answer  — ответ на один вопрос (номер варианта или распознанный текст);
-    POST /finish  — итог. Повторный вызов возвращает уже сохранённый результат,
-                    второй записи в «Прошлых прохождениях» не появляется.
+Новая структура (v24): два раздела — «Диагностика» и «Лечение», в каждом
+девять тестов по сценариям станции и один общий тест по всем вопросам.
+Вариантов ответа нет: учащийся пишет или проговаривает ответ, сервер сравнивает
+его с эталоном по смыслу (backend/app/answermatch.py).
 
-Правильные ответы в браузер не уходят до проверки: считает сервер.
-Режимы:
-    training — вердикт и пояснение приходят сразу после ответа;
-    testing  — вариантов нет, учащийся сам вводит или проговаривает ответ,
-               вердикт и разбор — только в конце.
+Одна попытка = одна строка в video_quiz_runs (поле section хранит ключ теста):
+    POST /start   — вопросы теста в случайном порядке;
+    POST /answer  — ответ на один вопрос (текст или распознанная речь);
+    POST /finish  — итог. Повторный вызов отдаёт уже сохранённый результат.
 """
 from __future__ import annotations
 
@@ -27,18 +25,20 @@ from ..models import Role, User, VideoQuizRun, utcnow
 from ..security import write_log
 from ..services import dumps, loads
 from ..videoquiz import (
-    QUESTIONS,
-    RUN_SIZE,
-    SECTIONS,
     SECTION_BY_KEY,
+    SECTIONS,
+    TEST_BY_KEY,
+    TESTS,
     TOTAL,
     by_id,
+    by_test,
+    check,
     pick_questions,
-    option_order,
+    section_tests,
     verdict,
 )
 from .. import speech
-from ..voice import choose
+from ..answermatch import match
 
 router = APIRouter(prefix="/api/video-quiz", tags=["video-quiz"])
 
@@ -47,7 +47,7 @@ Lang = Literal["ru", "en"]
 
 
 class StartIn(BaseModel):
-    section: str = "all"  # проверяется в /start: неизвестный раздел — ошибка, а не «все»
+    test: str = "diagnostics_all"     # ключ теста; неизвестный — ошибка
     mode: ModeName = "training"
     lang: Lang = "ru"
 
@@ -55,8 +55,7 @@ class StartIn(BaseModel):
 class AnswerIn(BaseModel):
     run_id: int = Field(ge=1)
     question_id: int = Field(ge=1)
-    answer: int | None = Field(default=None, ge=0, le=10)   # номер варианта на экране
-    text: str | None = Field(default=None, max_length=600)  # свободный ответ (зачёт, голос)
+    text: str | None = Field(default=None, max_length=600)
 
 
 class FinishIn(BaseModel):
@@ -70,7 +69,7 @@ class TranscribeIn(BaseModel):
 
 
 class VoiceIn(BaseModel):
-    """Расшифровка речи от браузера: находят вариант, но вердикт не раскрывают."""
+    """Расшифровка речи от браузера: показываем, что услышали, но не вердикт."""
     run_id: int = Field(ge=1)
     question_id: int = Field(ge=1)
     transcript: str = Field(min_length=1, max_length=600)
@@ -90,10 +89,6 @@ def _own_run(db: Session, run_id: int, user: User) -> VideoQuizRun:
     return run
 
 
-def _orders(run: VideoQuizRun) -> dict[str, list[int]]:
-    return loads(run.option_orders, {}) or {}
-
-
 def _answers(run: VideoQuizRun) -> dict[str, dict]:
     return loads(run.answers, {}) or {}
 
@@ -108,54 +103,42 @@ def _run_questions(run: VideoQuizRun) -> list:
     return found
 
 
-def _public_question(question, order: list[int], lang: str) -> dict:
-    options = question.options[lang]
-    return {
-        "id": question.id,
-        "clip": question.clip,
-        "title": question.title[lang],
-        "question": question.question[lang],
-        "options": [options[i] for i in order],
-    }
-
-
-def _resolve(run: VideoQuizRun, question, payload: AnswerIn) -> tuple[int | None, list[str]]:
-    """Номер варианта на экране (или None) и совпавшие слова — по номеру либо по тексту."""
-    order = _orders(run).get(str(question.id)) or list(range(len(question.options["ru"])))
-    if payload.text:
-        decision = choose(payload.text, question.voice_options(run.lang))
-        original = decision["chosen"]
-        if original is None or original not in order:
-            return None, decision["matched"]
-        return order.index(original), decision["matched"]
-    if payload.answer is None:
-        return None, []
-    if payload.answer >= len(order):
-        raise HTTPException(422, "Нет такого варианта ответа")
-    return payload.answer, []
+def _public_question(question, lang: str, test_title: str = "") -> dict:
+    data = question.public(lang)
+    data["test_title"] = test_title
+    return data
 
 
 @router.get("/sections")
 def sections(lang: Lang = "ru", user: User = Depends(_student)) -> dict:
-    """Разделы видеотеста: картинка, описание, сколько вопросов."""
-    return {"total": TOTAL, "items": [s.public(lang) for s in SECTIONS]}
+    """Разделы и тесты: два раздела, в каждом девять тестов по сценариям и общий."""
+    return {
+        "total": TOTAL,
+        "sections": [
+            {
+                **section.public(lang),
+                "tests": [test.public(lang) for test in section_tests(section.key)],
+            }
+            for section in SECTIONS
+        ],
+    }
 
 
 @router.post("/start")
 def start(payload: StartIn, db: Session = Depends(get_db),
           user: User = Depends(_student)) -> dict:
-    """Новый заход: случайные вопросы раздела и случайный порядок вариантов."""
-    if payload.section not in SECTION_BY_KEY:
-        raise HTTPException(422, "Нет такого раздела")
-    picked = pick_questions(payload.section)
-    orders = {str(q.id): option_order(q) for q in picked}
+    """Новый заход: вопросы выбранного теста в случайном порядке."""
+    test = by_test(payload.test)
+    if test is None:
+        raise HTTPException(422, "Нет такого теста")
+    picked = pick_questions(test.key)
     run = VideoQuizRun(
         user_id=user.id,
-        section=payload.section,
+        section=test.key,          # в этом поле теперь ключ теста
         mode=payload.mode,
         lang=payload.lang,
         question_ids=dumps([q.id for q in picked]),
-        option_orders=dumps(orders),
+        option_orders=dumps({}),   # вариантов больше нет
         answers=dumps({}),
         total=len(picked),
     )
@@ -166,16 +149,18 @@ def start(payload: StartIn, db: Session = Depends(get_db),
         "run_id": run.id,
         "mode": run.mode,
         "lang": run.lang,
-        "section": run.section,
+        "test": test.key,
+        "test_title": test.title[run.lang],
+        "section": test.section,
         "total": len(picked),
-        "items": [_public_question(q, orders[str(q.id)], run.lang) for q in picked],
+        "items": [_public_question(q, run.lang, test.title[run.lang]) for q in picked],
     }
 
 
 @router.post("/answer")
 def answer(payload: AnswerIn, db: Session = Depends(get_db),
            user: User = Depends(_student)) -> dict:
-    """Ответ на один вопрос. Принимает номер варианта или свободный текст (зачёт, голос)."""
+    """Ответ словами. В обучении сразу вердикт и эталон, в зачёте — только приём ответа."""
     run = _own_run(db, payload.run_id, user)
     if run.finished_at is not None:
         raise HTTPException(409, "Попытка уже завершена")
@@ -183,50 +168,40 @@ def answer(payload: AnswerIn, db: Session = Depends(get_db),
     run_question_ids = [int(qid) for qid in (loads(run.question_ids, []) or [])]
     if question is None or question.id not in run_question_ids:
         raise HTTPException(404, "Такого вопроса нет в этой попытке")
-    if payload.answer is None and not (payload.text or "").strip():
+    text = (payload.text or "").strip()
+    if not text:
         raise HTTPException(422, "Пустой ответ")
-
-    order = _orders(run).get(str(question.id)) or list(range(len(question.options["ru"])))
-    if str(question.id) in _answers(run):
-        # ответ уже принят: иначе после вердикта можно было бы выбрать правильный вариант
-        raise HTTPException(409, "На этот вопрос уже есть ответ")
-    display_index, matched = _resolve(run, question, payload)
-
-    if payload.text is not None and display_index is None:
-        # текст не сопоставился ни с одним вариантом: не засчитываем как ошибку,
-        # а просим сказать иначе (иначе «ответил и получил 0» выглядит несправедливо)
-        return {
-            "question_id": question.id,
-            "accepted": False,
-            "recognised": False,
-            "matched": matched[:5],
-            "retry": True,
-            "text": payload.text,
-        }
-
     answers = _answers(run)
-    correct = display_index is not None and order[display_index] == question.correct
+    if str(question.id) in answers:
+        raise HTTPException(409, "На этот вопрос уже есть ответ")
+
+    result = match(question, text)
+    if result["verdict"] == "retry":
+        # «не расслышал»: не считаем ошибкой, просим сказать иначе
+        return {"question_id": question.id, "accepted": False, "retry": True,
+                "text": text, "hint": "Не разобрал ответ — сформулируйте иначе."}
+
     answers[str(question.id)] = {
-        "display": display_index,
-        "text": payload.text,
-        "correct": bool(correct),
+        "text": text,
+        "verdict": result["verdict"],
+        "coverage": result["coverage"],
+        "correct": result["verdict"] in ("correct", "partial"),
     }
     run.answers = dumps(answers)
     db.commit()
 
     if run.mode == "testing":
-        # зачёт: подтверждаем приём, но не подсказываем ни вариант, ни вердикт
-        return {"question_id": question.id, "accepted": True, "recognised": display_index is not None}
+        return {"question_id": question.id, "accepted": True}
 
-    correct_display = order.index(question.correct)
     return {
         "question_id": question.id,
-        "correct": bool(correct),
-        "correct_index": correct_display,
-        "correct_text": question.options[run.lang][question.correct],
-        "chosen": display_index,
-        "recognised": display_index is not None,
-        "matched": matched[:5],
+        "accepted": True,
+        "correct": result["verdict"] in ("correct", "partial"),
+        "verdict": result["verdict"],
+        "coverage": result["coverage"],
+        "matched": result["matched"],
+        "missed": result["missed"],
+        "reference": question.reference[run.lang],
         "explain": question.explain[run.lang],
         "checklist": question.checklist,
     }
@@ -234,10 +209,13 @@ def answer(payload: AnswerIn, db: Session = Depends(get_db),
 
 @router.get("/voice/status")
 def voice_status(user: User = Depends(_student)) -> dict:
-    """Что доступно для голосового ответа: браузерное распознавание и серверное."""
+    """Что доступно для ответа: распознавание речи и проверка смысла на сервере."""
+    from .. import semantic_onnx
+
     return {
         "server": speech.status(),
         "hint": "server" if speech.status()["available"] else "browser",
+        "semantic": semantic_onnx.status(),
     }
 
 
@@ -269,7 +247,7 @@ def transcribe(payload: TranscribeIn, user: User = Depends(_student)) -> dict:
 @router.post("/voice")
 def voice(payload: VoiceIn, db: Session = Depends(get_db),
           user: User = Depends(_student)) -> dict:
-    """Голосовой ответ: распознаёт браузер, сервер лишь сопоставляет фразу с вариантом."""
+    """Голосовой ответ: браузер распознал речь, сервер показывает, что услышал."""
     run = _own_run(db, payload.run_id, user)
     question = by_id(payload.question_id)
     run_question_ids = [int(qid) for qid in (loads(run.question_ids, []) or [])]
@@ -277,19 +255,12 @@ def voice(payload: VoiceIn, db: Session = Depends(get_db),
         raise HTTPException(404, "Такого вопроса нет в этой попытке")
     if not (payload.transcript or "").strip():
         raise HTTPException(422, "Пустая фраза")
-
-    decision = choose(payload.transcript, question.voice_options(run.lang))
-    order = _orders(run).get(str(question.id)) or list(range(len(question.options["ru"])))
-    display = order.index(decision["chosen"]) if decision["chosen"] in order else None
+    preview = match(question, payload.transcript)
     return {
         "question_id": question.id,
-        "chosen": display,
-        "option_text": question.options[run.lang][decision["chosen"]]
-        if decision["chosen"] is not None else None,
-        "confidence": decision["confidence"],
-        "matched": decision["matched"][:5],
-        "transcript": decision["transcript"],
-        "ambiguous": bool(decision.get("ambiguous")),
+        "transcript": payload.transcript,
+        "recognised": preview["verdict"] != "retry",
+        "matched": preview["matched"][:5],
         "mode": run.mode,
     }
 
@@ -297,34 +268,34 @@ def voice(payload: VoiceIn, db: Session = Depends(get_db),
 def _summary(run: VideoQuizRun) -> dict:
     """Итог попытки: считается из сохранённых ответов (одинаково при повторном запросе)."""
     lang = run.lang
-    orders = _orders(run)
     answers = _answers(run)
+    questions = _run_questions(run)
     details = []
     score = 0
-    questions = _run_questions(run)
     for question in questions:
-        order = orders.get(str(question.id)) or list(range(len(question.options["ru"])))
         stored = answers.get(str(question.id)) or {}
-        display = stored.get("display")
-        correct_index = order.index(question.correct)
-        correct = display is not None and display == correct_index
-        score += int(correct)
+        good = bool(stored.get("correct"))
+        # полный ответ — 1 балл, «сказано не всё» — 0,5
+        credit = 1.0 if stored.get("verdict") == "correct" else (0.5 if good else 0.0)
+        score += credit
         details.append({
             "id": question.id,
-            "title": question.title[lang],
-            "question": question.question[lang],
-            "options": [question.options[lang][i] for i in order],
-            "chosen": display if display is not None else -1,
-            "text": stored.get("text"),
-            "correct": correct,
-            "correct_index": correct_index,
+            "text": question.text[lang],
+            "answer": stored.get("text"),
+            "verdict": stored.get("verdict"),
+            "coverage": stored.get("coverage"),
+            "correct": good,
+            "credit": credit,
+            "reference": question.reference[lang],
             "explain": question.explain[lang],
             "checklist": question.checklist,
         })
 
     total = len(questions) or run.total or 1
+    score = round(score, 2)
     percent = round(score * 100 / total, 1)
     code, text = verdict(percent, lang)
+    test = by_test(run.section)
     return {
         "id": run.id,
         "score": score,
@@ -333,7 +304,9 @@ def _summary(run: VideoQuizRun) -> dict:
         "verdict": code,
         "verdict_text": text,
         "mode": run.mode,
-        "section": run.section,
+        "section": test.section if test else run.section,
+        "test": run.section,
+        "test_title": test.title[lang] if test else run.section,
         "lang": lang,
         "details": details,
         "started_at": run.started_at.isoformat() if run.started_at else None,
@@ -361,7 +334,7 @@ def finish(payload: FinishIn, db: Session = Depends(get_db),
                   entity="video_quiz_run", entity_id=run.id,
                   payload={"score": run.score, "total": run.total,
                            "percent": run.percent, "mode": run.mode,
-                           "section": run.section})
+                           "test": run.section})
     summary["already_finished"] = already
     return summary
 
@@ -373,28 +346,29 @@ def results(db: Session = Depends(get_db), user: User = Depends(_student)) -> di
         select(VideoQuizRun)
         .where(VideoQuizRun.user_id == user.id, VideoQuizRun.finished_at.is_not(None))
         .order_by(VideoQuizRun.finished_at.desc())
-        .limit(50)  # история в боковой панели; 50 хватает на семестр
+        .limit(50)
     ).all()
-    return {
-        "items": [
-            {
-                "id": row.id,
-                "score": row.score,
-                "total": row.total,
-                "percent": row.percent,
-                "mode": row.mode,
-                "section": row.section,
-                "finished_at": row.finished_at.isoformat() if row.finished_at else None,
-            }
-            for row in rows
-        ]
-    }
+    items = []
+    for row in rows:
+        test = by_test(row.section)
+        items.append({
+            "id": row.id,
+            "score": row.score,
+            "total": row.total,
+            "percent": row.percent,
+            "mode": row.mode,
+            "section": test.section if test else row.section,
+            "test": row.section,
+            "test_title": test.title["ru"] if test else row.section,
+            "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+        })
+    return {"items": items}
 
 
 @router.get("/results/{run_id}")
 def result_detail(run_id: int, db: Session = Depends(get_db),
                   user: User = Depends(_student)) -> dict:
-    """Разбор завершённой попытки: что было выбрано и как правильно."""
+    """Разбор завершённой попытки: ответ учащегося и эталон."""
     run = _own_run(db, run_id, user)
     if run.finished_at is None:
         raise HTTPException(404, "Попытка не завершена")
