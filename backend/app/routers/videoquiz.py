@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..deps import require_student
+from ..deps import require_student, require_user
 from ..models import Role, User, VideoQuizRun, utcnow
 from ..security import write_log
 from ..services import dumps, loads
@@ -75,10 +75,10 @@ class VoiceIn(BaseModel):
     transcript: str = Field(min_length=1, max_length=600)
 
 
-def _student(user: User = Depends(require_student)) -> User:
-    """Видеотест — для учащихся; преподавателю здесь делать нечего."""
-    if user.role != Role.student.value:
-        raise HTTPException(403, "Видеотест доступен только учащимся")
+def _student(user: User = Depends(require_user)) -> User:
+    """Видеотест: учащийся проходит, преподаватель — проверяет (тот же интерфейс)."""
+    if user.role not in (Role.student.value, Role.teacher.value):
+        raise HTTPException(403, "Видеотест доступен учащимся и преподавателям")
     return user
 
 

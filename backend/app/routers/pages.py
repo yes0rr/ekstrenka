@@ -209,9 +209,8 @@ def video_quiz_page(request: Request, user: User | None = Depends(get_current_us
     """Видеотест: знание алгоритма станции по фрагментам записи (backend/app/videoquiz.py)."""
     if (redirect := _guard(user)) is not None:
         return redirect
-    if user.role != Role.student.value:
-        return RedirectResponse("/", status_code=303)
-    return render(request, "video_quiz.html", user)
+    return render(request, "video_quiz.html", user,
+                  is_teacher=user.role == Role.teacher.value)
 
 
 # ----------------------------- инструкция по экстренной помощи -----------------------------

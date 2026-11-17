@@ -18,6 +18,7 @@ torch не нужен. Фраза — примерно 10–20 мс.
 from __future__ import annotations
 
 import os
+from .config import BASE_DIR  # noqa: F401  (при импорте читает .env — флаги видны и из консоли)
 import threading
 from pathlib import Path
 

@@ -12,6 +12,17 @@
   </div>
 </section>
 
+{% if is_teacher %}
+<div class="alert info" id="teacherNote">
+  <div><b>Вы вошли как преподаватель.</b> Здесь можно пройти любой тест так же, как учащийся, и посмотреть,
+  что именно он увидит. Прохождения сохраняются в «Результатах» и в «Логах» под вашим именем — для чистой
+  проверки лучше завести отдельного учащегося.</div>
+  <div class="muted small">Порядок проверки: «Обучение» → любой сценарий → ответить словами (или голосом) →
+  посмотреть вердикт и эталон. Затем «Зачёт» → проверить, что до конца захода вердиктов не видно, а разбор
+  появляется только после кнопки «Завершить».</div>
+</div>
+{% endif %}
+
 <div class="quiz-layout">
   <div class="quiz-main">
 
@@ -80,6 +91,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/video_voice.js?v=25"></script>
-<script src="/static/js/video_quiz.js?v=25"></script>
+<script src="/static/js/video_voice.js?v=28"></script>
+<script src="/static/js/video_quiz.js?v=28"></script>
 {% endblock %}

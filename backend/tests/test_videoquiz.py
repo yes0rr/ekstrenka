@@ -284,13 +284,13 @@ def test_review_of_finished_run():
 
 # ----------------------------- доступ -----------------------------
 
-def test_teacher_cannot_use_video_quiz():
+def test_teacher_can_use_video_quiz():
     client = TestClient(app)
     client.__enter__()
     client.post("/login", data=TEACHER, follow_redirects=False)
-    assert client.get("/api/video-quiz/sections").status_code == 403
+    assert client.get("/api/video-quiz/sections").status_code == 200
     assert client.post("/api/video-quiz/start",
-                       json={"test": "diagnostics_all"}).status_code == 403
+                       json={"test": "diagnostics_all"}).status_code == 200
 
 
 def test_voice_status_endpoint():
@@ -329,3 +329,17 @@ def test_semantic_similarity_returns_number_or_none():
 
     value = semantic_onnx.similarity("пациент без сознания", "отсутствие сознания")
     assert 0.0 <= value <= 1.0
+
+
+def test_teacher_opens_video_quiz_page():
+    """Преподаватель открывает страницу видеотеста и видит памятку проверяющего."""
+    with TestClient(app) as client:
+        client.post("/login", data=TEACHER, follow_redirects=False)
+        page = client.get("/student/video-quiz")
+        assert page.status_code == 200
+        assert "teacherNote" in page.text
+
+
+def test_student_page_has_no_teacher_note():
+    with _student_client() as client:
+        assert "teacherNote" not in client.get("/student/video-quiz").text

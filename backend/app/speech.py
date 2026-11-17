@@ -19,6 +19,7 @@ import base64
 import io
 import logging
 import os
+from .config import BASE_DIR  # noqa: F401  (при импорте читает .env — флаги видны и из консоли)
 import threading
 from pathlib import Path
 
