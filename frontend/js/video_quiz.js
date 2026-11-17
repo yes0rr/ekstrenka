@@ -102,24 +102,45 @@
       head.appendChild(el('p', 'muted small', section.description));
       block.appendChild(head);
 
-      const grid = el('div', 'quiz-tests');
+      // тесты группируются по занятиям из таблиц преподавателя:
+      // 2 — ОДН/комы, 3 — ОКС/шоки, 4 — зачёт по всем темам
+      const groups = {};
       (section.tests || []).forEach(function (test) {
-        const isAll = test.key.endsWith('_all');
-        const tile = el('button', 'quiz-test' + (isAll ? ' quiz-test-all' : ''));
-        tile.type = 'button';
-        tile.dataset.test = test.key;
-        tile.appendChild(el('span', 'quiz-test-title', test.title));
-        tile.appendChild(el('span', 'quiz-test-meta muted small',
-          (isAll ? t('Общий тест') + ' · ' : '') + test.count + ' ' + questionsWord(test.count)));
-        tile.classList.toggle('is-active', state.testKey === test.key);
-        tile.addEventListener('click', function () {
-          state.testKey = test.key;
-          renderCatalog();
-          startRun(test.key);
-        });
-        grid.appendChild(tile);
+        const lesson = test.lesson || 4;
+        (groups[lesson] = groups[lesson] || []).push(test);
       });
-      block.appendChild(grid);
+      Object.keys(groups).map(Number).sort(function (a, b) { return a - b; })
+        .forEach(function (lesson) {
+          const group = el('div', 'quiz-lesson');
+          group.appendChild(el('div', 'quiz-lesson-title muted small',
+            lesson === 4 ? t('Занятие 4 · Зачёт: все темы') : t('Занятие ') + lesson +
+              (lesson === 2 ? t(' · ОДН и комы') : t(' · ОКС и шоки'))));
+          const grid = el('div', 'quiz-tests');
+          groups[lesson].forEach(function (test) {
+            const isAll = test.key.endsWith('_all');
+            const isLesson = /_lesson\d$/.test(test.key);
+            const tile = el('button', 'quiz-test' + (isAll ? ' quiz-test-all' : '') +
+              (isLesson ? ' quiz-test-lesson' : ''));
+            tile.type = 'button';
+            tile.dataset.test = test.key;
+            // в заголовке уже есть «Занятие N · …» — оставляем только сценарий
+            let title = String(test.title).replace(/^Занятие \d+ · [^:]+: /, '');
+            if (/^Занятие \d+/.test(title)) title = t('Все вопросы раздела');
+            tile.appendChild(el('span', 'quiz-test-title', title));
+            tile.appendChild(el('span', 'quiz-test-meta muted small',
+              (isAll ? t('Зачёт') + ' · ' : (isLesson ? t('Всё занятие') + ' · ' : '')) +
+              test.count + ' ' + questionsWord(test.count)));
+            tile.classList.toggle('is-active', state.testKey === test.key);
+            tile.addEventListener('click', function () {
+              state.testKey = test.key;
+              renderCatalog();
+              startRun(test.key);
+            });
+            grid.appendChild(tile);
+          });
+          group.appendChild(grid);
+          block.appendChild(group);
+        });
       catalog.appendChild(block);
     });
   }
@@ -303,7 +324,9 @@
       if (result.reference) {
         feedback.appendChild(el('div', 'quiz-reference', t('Эталон: ') + result.reference));
       }
-      if (result.explain) feedback.appendChild(el('div', 'muted small', result.explain));
+      if (result.explain && result.explain !== result.reference) {
+        feedback.appendChild(el('div', 'muted small', result.explain));
+      }
     } catch (error) {
       feedback.hidden = false;
       feedback.className = 'quiz-feedback is-bad';
@@ -360,7 +383,9 @@
       card.appendChild(el('div', 'quiz-answer-line',
         t('Ваш ответ: ') + (detail.answer || t('нет ответа'))));
       card.appendChild(el('div', 'quiz-reference', t('Эталон: ') + detail.reference));
-      if (detail.explain) card.appendChild(el('div', 'muted small', detail.explain));
+      if (detail.explain && detail.explain !== detail.reference) {
+        card.appendChild(el('div', 'muted small', detail.explain));
+      }
       list.appendChild(card);
     });
     window.scrollTo({ top: list.getBoundingClientRect().top + window.scrollY - 76, behavior: 'smooth' });
