@@ -201,14 +201,61 @@ def _contains(needle: list[str], haystack: set[str], haystack_text: str) -> bool
 
 _UNITS = {"мг", "мл", "ед", "вв", "вм", "проц", "сек", "мин", "мм", "рт", "ст", "кг", "час"}
 
+# короткие, но осмысленные: путь введения, номер межреберья, сторона
+_SHORT_CONTENT = {"в/м", "в/в", "п/к", "ii", "2", "3", "80", "40"}
+# сокращения путей введения: дроби «в/м» токенайзер рвёт на «в» и «м», поэтому ищем подстрокой
+_ROUTE_RE = re.compile(r"в\s*/\s*([вмк])")
+# как студент может сказать путь введения обычными словами
+_ROUTE_WORDS = {
+    "в/м": ("мышц", "мышцу", "внутримышечн", "бедро", "бедра", "плечо"),
+    "в/в": ("вену", "вены", "внутривенн", "капельниц"),
+    "п/к": ("подкожн", "под кожу"),
+}
+
+
+def _is_dose(word: str) -> bool:
+    """«0,5», «2,5», «80», «1000» — дозировка/объём. Пишется цифрами или словами."""
+    word = word.strip().lower()
+    if not word:
+        return False
+    if word[0].isdigit():
+        return True
+    return word in _NUM_WORDS
+
 
 def _is_content(synonym: str) -> bool:
-    """Смысловое слово, а не единица измерения: «аспирин» — да, «мг» — нет."""
-    word = synonym.strip().lower()
+    """Смысловое слово, а не единица измерения: «аспирин» — да, «мг» — нет.
+
+    Дозировка с дробной частью («0,5», «2,5») — значимая: это доза препарата.
+    """
+    word = synonym.strip().lower().replace(".", ",")
+    if _is_dose(word):        # 0,5 / 2,5 / 80 — дозировки, они важны
+        return True
     if not word.isalnum() or word.isdigit():
         return False
     # аббревиатуры из чек-листа (ЧДД, ЧСС, ЭКГ, АД) — тоже смысловые слова
+    if word in _SHORT_CONTENT:
+        return True
+    if word in {"ii", "iii", "iv"}:          # римские цифры — номер межреберья
+        return True
     return word not in _UNITS and len(word) >= 2
+
+
+def _route_hit(synonym: str, haystack_text: str) -> bool:
+    """«в/м» в ответе: токенайзер рубит дробь, поэтому проверяем по тексту."""
+    plain = synonym.strip().lower()
+    text = f" {haystack_text} "
+    if plain in _ROUTE_WORDS and any(f" {w} " in text for w in _ROUTE_WORDS[plain]):
+        return True
+    match_route = _ROUTE_RE.fullmatch(plain.replace(" ", ""))
+    if not match_route:
+        return False
+    letter = match_route.group(1)
+    # «в/в» после токенизации превращается в «в в» — учитываем и это
+    variants = {f" в {letter}", f"в/{letter}", f" в {letter} "}
+    if letter in {"в", "м", "к"}:
+        variants.add(f"в {letter}")
+    return any(v in f" {haystack_text} " for v in variants)
 
 
 def _group_hit(group: tuple[str, ...], haystack: set[str], haystack_text: str) -> float:
@@ -219,6 +266,8 @@ def _group_hit(group: tuple[str, ...], haystack: set[str], haystack_text: str) -
     """
     best = 0.0
     for synonym in group:
+        if _route_hit(synonym, haystack_text):      # в/м, в/в, п/к
+            return 1.0
         if not _contains(_norm_phrase(synonym), haystack, haystack_text):
             continue
         best = max(best, 1.0 if _is_content(synonym) else 0.5)
@@ -284,9 +333,18 @@ def match(question, answer: str) -> dict:
     if semantic is not None:
         coverage = max(coverage, round(semantic * 0.95, 3))
 
+    # вопрос про дозы/объёмы: препараты без цифр — не полный ответ.
+    # считаем только группы, где ВСЕ синонимы — числа/единицы («мг», «мл», «150», «300»),
+    # иначе группа ('ii','2','второ') ложно считалась бы дозировкой
+    def _is_dose_group(group) -> bool:
+        return bool(group) and all(_is_dose(x) or x.strip().lower() in _UNITS for x in group)
+
+    dose_groups = [g for g in groups if _is_dose_group(g)]
+    doses_named = any(_is_dose(w) for w in haystack)
+
     if len(haystack) <= 1 and not hit:
         verdict = "retry"
-    elif key_cover >= 0.75 and main_hit:
+    elif key_cover >= 0.75 and main_hit and (not dose_groups or doses_named):
         verdict = "correct"
     elif key_cover >= 0.33 and content_hit:
         verdict = "partial"

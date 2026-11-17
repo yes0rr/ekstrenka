@@ -46,15 +46,18 @@ def test_bank_has_two_sections_and_nine_scenarios():
     assert len(SCENARIOS) == 9
     for section in SECTIONS:
         tests = section_tests(section.key)
-        assert len(tests) == 10
-        scenario_tests = [t for t in tests if not t.key.endswith("_all")]
+        # 9 сценариев + 2 теста «всё занятие» (ОДН/комы, ОКС/шоки) + общий зачётный
+        assert len(tests) == 12
+        scenario_tests = [t for t in tests if not t.key.endswith("_all")
+                          and "_lesson" not in t.key]
         assert len(scenario_tests) == 9
         for test in scenario_tests:
-            assert len(test.question_ids) == 5
+            # по вопросам преподавателя: 4 общих + столько, сколько есть у сценария
+            assert 2 <= len(test.question_ids) <= 6
         total_test = [t for t in tests if t.key.endswith("_all")][0]
-        assert len(total_test.question_ids) == 45
-    assert TOTAL == len(QUESTIONS) == 90
-    assert len(TESTS) == 20
+        assert len(total_test.question_ids) == sum(1 for q in QUESTIONS if q.section == section.key)
+    assert TOTAL == len(QUESTIONS) == 77
+    assert len(TESTS) == 24
 
 
 def test_every_question_is_answerable_by_words():
@@ -72,9 +75,9 @@ def test_every_question_is_answerable_by_words():
 
 def test_matching_accepts_different_wording():
     """Один и тот же смысл разными словами — засчитывается."""
-    question = [q for q in QUESTIONS if q.test == "diag_oks1"][0]
-    assert match(question, "сатурация 88 процентов, кислород показан")["verdict"] == "correct"
-    assert match(question, "восемьдесят восемь, дать кислород")["verdict"] in ("correct", "partial")
+    question = [q for q in QUESTIONS if q.test == "diag_oks1"][0]   # этап, на котором заподозрили ОКС
+    assert match(question, "на этапе циркулейшин, когда смотрел сердечно-сосудистую систему")["verdict"] == "correct"
+    assert match(question, "на этапе СИ")["verdict"] in ("correct", "partial")
 
 
 def test_reference_answer_is_always_accepted():
@@ -84,9 +87,17 @@ def test_reference_answer_is_always_accepted():
 
 
 def test_matching_rejects_opposite_meaning():
-    """«Кислород не нужен» там, где показан — ошибка, а не «не расслышал»."""
+    """Ответ про другой этап — ошибка, а не «не расслышал»."""
     question = [q for q in QUESTIONS if q.test == "diag_oks1"][0]
-    result = match(question, "сатурация нормальная, кислород не нужен")
+    result = match(question, "кислород не показана, сатурация норма")
+    assert result["verdict"] == "wrong"
+    assert result["blocked"]
+
+
+def test_negation_is_still_rejected():
+    """Отрицание по смыслу: «кислород не нужен» там, где показан — ошибка."""
+    question = [q for q in QUESTIONS if q.must_not][0]
+    result = match(question, "сатурация нормальная, " + question.must_not[0])
     assert result["verdict"] == "wrong"
     assert result["blocked"]
 
@@ -94,7 +105,7 @@ def test_matching_rejects_opposite_meaning():
 def test_matching_marks_partial_answer():
     """Половина смысла — «принято, но сказано не всё»."""
     question = [q for q in QUESTIONS if q.test == "diag_oks1"][0]
-    assert match(question, "сатурация 88")["verdict"] in ("partial", "correct")
+    assert match(question, "на этапе СИ")["verdict"] in ("partial", "correct")
     assert match(question, "не помню")["verdict"] == "wrong"
 
 
@@ -116,7 +127,8 @@ def test_sections_endpoint_lists_sections_and_tests():
         assert keys == ["diagnostics", "treatment"]
         for section in payload["sections"]:
             assert section["title"] and section["description"]
-            assert len(section["tests"]) == 10
+            # 9 сценариев + 2 теста «всё занятие» + общий зачётный
+            assert len(section["tests"]) == 12
             for test in section["tests"]:
                 assert test["title"] and test["count"] >= 1
                 assert test["section"] == section["key"]
@@ -128,7 +140,7 @@ def test_sections_endpoint_lists_sections_and_tests():
 def test_start_returns_only_questions_of_the_test():
     with _student_client() as client:
         run = _start(client, "diag_oks1")
-        assert len(run["items"]) == run["total"] == 5
+        assert len(run["items"]) == run["total"] == len(by_test("diag_oks1").question_ids)
         assert run["section"] == "diagnostics"
         assert run["test_title"]
         ids = {item["id"] for item in run["items"]}
@@ -137,7 +149,7 @@ def test_start_returns_only_questions_of_the_test():
             assert "reference" not in item and "keys" not in item
 
         big = _start(client, "treatment_all")
-        assert big["total"] == 45
+        assert big["total"] == sum(1 for q in QUESTIONS if q.section == "treatment")
 
 
 def test_unknown_test_is_rejected():
@@ -343,3 +355,48 @@ def test_teacher_opens_video_quiz_page():
 def test_student_page_has_no_teacher_note():
     with _student_client() as client:
         assert "teacherNote" not in client.get("/student/video-quiz").text
+
+
+def test_tests_follow_expert_lessons():
+    """Тесты разложены по занятиям из таблиц: 2 — ОДН/комы, 3 — ОКС/шоки, 4 — зачёт."""
+    from backend.app.quizbank import TESTS
+
+    by_key = {t.key: t for t in TESTS}
+    for key in ("bos", "pneumo", "hypo", "hyper"):
+        assert by_key[f"diag_{key}"].lesson == 2
+        assert by_key[f"treat_{key}"].lesson == 2
+    for key in ("oks1", "oks2", "ash", "gikk", "tela"):
+        assert by_key[f"diag_{key}"].lesson == 3
+        assert by_key[f"treat_{key}"].lesson == 3
+    # состав занятий считается от фактического банка, а не от константы
+    diag = [q for q in QUESTIONS if q.section == "diagnostics"]
+    assert len(by_key["diag_lesson2"].question_ids) == sum(1 for q in diag if q.lesson == 2)
+    assert len(by_key["diag_lesson3"].question_ids) == sum(1 for q in diag if q.lesson == 3)
+    assert len(by_key["diagnostics_all"].question_ids) == len(diag)
+    assert "Занятие 2" in by_key["treat_bos"].title["ru"]
+    assert "Занятие 4" in by_key["treatment_all"].title["ru"]
+
+
+def test_treatment_requires_doses():
+    """Вопрос про дозы: препараты без цифр — «принято частично», а не «верно»."""
+    question = [q for q in QUESTIONS if q.test == "treat_ash" and "доз" in q.text["ru"]][0]
+    without = match(question, "эпинефрин, физраствор, гидрокортизон, сальбутамол")
+    with_doses = match(question, question.reference["ru"])
+    assert without["verdict"] in ("partial", "wrong")
+    assert with_doses["verdict"] == "correct"
+
+
+def test_route_words_are_understood():
+    """«в мышцу бедра» = в/м, «в вену» = в/в."""
+    question = [q for q in QUESTIONS if q.test == "treat_ash" and "пут" in q.text["ru"]][0]
+    assert match(question, question.reference["ru"])["verdict"] == "correct"
+    spoken = ("эпинефрин в мышцу бедра, физраствор в вену струйно, гидрокортизон в вену, "
+              "сальбутамол через небулайзер")
+    assert match(question, spoken)["verdict"] == "correct"
+
+
+def test_refusal_is_wrong_for_treatment():
+    """«Ничего не назначал» — ошибка."""
+    question = [q for q in QUESTIONS if q.section == "treatment"][0]
+    assert match(question, "ничего не назначал")["verdict"] == "wrong"
+    assert match(question, "не знаю")["verdict"] == "wrong"
