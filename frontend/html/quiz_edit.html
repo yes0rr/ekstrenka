@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Вопросы видеотеста — правка{% endblock %}
+
+{% block content %}
+<section class="page-head">
+  <div>
+    <h1>Вопросы видеотеста: правка</h1>
+    <p class="muted">Здесь можно поправить формулировку вопроса, эталонный ответ и ключевые слова — так,
+      как их будет проверять сервер. Изменения сразу действуют на новые заходы учащихся; старые попытки
+      не меняются. Любую правку можно отменить кнопкой «Вернуть исходный».</p>
+  </div>
+  <div class="page-actions">
+    <a class="btn ghost" href="/student/video-quiz">Открыть видеотест</a>
+  </div>
+</section>
+
+<div class="panel" style="margin-bottom:14px">
+  <div class="quiz-edit-filters">
+    <label class="muted small">Раздел
+      <select id="editSection">
+        <option value="">все</option>
+        <option value="diagnostics">Диагностика</option>
+        <option value="treatment">Лечение</option>
+      </select>
+    </label>
+    <label class="muted small">Сценарий
+      <select id="editScenario"><option value="">все</option></select>
+    </label>
+    <label class="muted small">Поиск
+      <input id="editSearch" type="search" placeholder="слово в вопросе или эталоне">
+    </label>
+    <label class="muted small"><input id="editOnlyChanged" type="checkbox"> только изменённые</label>
+    <span class="muted small" id="editCounter"></span>
+  </div>
+</div>
+
+<div id="editList" class="quiz-edit-list"></div>
+<div class="panel muted small" id="editEmpty" hidden>Ничего не найдено — измените фильтры.</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/quiz_edit.js?v=34"></script>
+{% endblock %}

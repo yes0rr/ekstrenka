@@ -717,3 +717,41 @@ html[data-theme="light"][data-accent="graphite"] { --accent: #4b5566; --accent-2
 .quiz-card-review.is-bad { border-color: var(--bad, #e05a5a); }
 .quiz-review-head { display: flex; flex-direction: column; gap: 4px; }
 .quiz-review-head h3 { margin: 0; }
+
+/* ---------- правка вопросов видеотеста (преподаватель) ---------- */
+.quiz-edit-filters { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+.quiz-edit-filters label { display: flex; flex-direction: column; gap: 4px; }
+.quiz-edit-filters select, .quiz-edit-filters input[type=search] {
+  background: var(--panel, #161a22); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 8px; font: inherit; min-width: 160px;
+}
+.quiz-edit-list { display: flex; flex-direction: column; gap: 12px; }
+.quiz-edit-card { padding: 14px; }
+.quiz-edit-card.is-edited { border-left: 3px solid var(--ok, #2fbf71); }
+.quiz-edit-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+.quiz-edit-badge { font-size: 12.5px; color: var(--muted, #8b93a7); }
+.quiz-edit-flag {
+  font-size: 11.5px; padding: 2px 8px; border-radius: 999px;
+  background: rgba(47,191,113,.16); color: #2fbf71;
+}
+.quiz-edit-flag.is-off { background: rgba(224,90,90,.16); color: #e05a5a; }
+.quiz-edit-grid { display: grid; gap: 10px; }
+.quiz-edit-field { display: flex; flex-direction: column; gap: 4px; }
+.quiz-edit-field input, .quiz-edit-field textarea {
+  width: 100%; box-sizing: border-box; background: var(--panel, #161a22); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13.5px;
+  resize: vertical;
+}
+.quiz-edit-hint { font-size: 11.5px; }
+.quiz-edit-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
+.quiz-edit-hide { display: flex; gap: 6px; align-items: center; }
+.quiz-edit-sandbox { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px;
+  padding-top: 10px; border-top: 1px dashed var(--border); }
+.quiz-edit-sandbox input {
+  flex: 1 1 320px; background: var(--panel, #161a22); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px;
+}
+.quiz-edit-result { flex: 1 1 100%; }
+.quiz-edit-result.is-correct { color: #2fbf71; }
+.quiz-edit-result.is-partial { color: #d8a72a; }
+.quiz-edit-result.is-wrong { color: #e05a5a; }
