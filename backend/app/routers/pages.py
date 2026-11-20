@@ -213,6 +213,16 @@ def video_quiz_page(request: Request, user: User | None = Depends(get_current_us
                   is_teacher=user.role == Role.teacher.value)
 
 
+@router.get("/teacher/video-quiz/edit")
+def quiz_edit_page(request: Request, user: User | None = Depends(get_current_user)):
+    """Правка вопросов видеотеста: только преподаватель."""
+    if (redirect := _guard(user)) is not None:
+        return redirect
+    if user.role != Role.teacher.value:
+        return RedirectResponse("/", status_code=303)
+    return render(request, "quiz_edit.html", user)
+
+
 # ----------------------------- инструкция по экстренной помощи -----------------------------
 @router.get("/instruction/emergency-help")
 def emergency_help_instruction(request: Request, user: User | None = Depends(get_current_user)):

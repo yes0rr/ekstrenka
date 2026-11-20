@@ -400,3 +400,56 @@ def test_refusal_is_wrong_for_treatment():
     question = [q for q in QUESTIONS if q.section == "treatment"][0]
     assert match(question, "ничего не назначал")["verdict"] == "wrong"
     assert match(question, "не знаю")["verdict"] == "wrong"
+
+
+# ----------------------------- правка вопросов преподавателем -----------------------------
+
+def test_teacher_edits_question_and_student_gets_new_version():
+    """Преподаватель правит вопрос — учащийся видит и слышит новую версию."""
+    from backend.app.quizbank import by_id
+
+    with TestClient(app) as client:
+        client.post("/login", data=TEACHER, follow_redirects=False)
+        qid = 1
+        new_text = "Проверочный вопрос от преподавателя"
+        new_ref = "Проверочный эталон: циркуляция и этап C."
+        payload = {"text": new_text, "reference": new_ref,
+                   "keys": "циркуляц, кровообращ | этап", "explain": "", "hidden": False}
+        assert client.post(f"/api/quiz-edit/{qid}", json=payload).status_code == 200
+
+        listed = {i["id"]: i for i in client.get("/api/quiz-edit/questions").json()["items"]}
+        assert listed[qid]["text"] == new_text
+        assert listed[qid]["edited"] is True
+
+        # проверка ответа идёт по новому эталону
+        check = client.get(f"/api/quiz-edit/check/{qid}", params={"answer": "на этапе циркуляции"}).json()
+        assert check["verdict"] in ("correct", "partial")
+
+        # откат возвращает исходник
+        assert client.delete(f"/api/quiz-edit/{qid}").status_code == 200
+        listed = {i["id"]: i for i in client.get("/api/quiz-edit/questions").json()["items"]}
+        assert listed[qid]["text"] == listed[qid]["base_text"]
+        assert listed[qid]["edited"] is False
+        assert by_id(qid).text["ru"] == listed[qid]["base_text"]
+
+
+def test_hidden_question_is_not_given_to_students():
+    """Скрытый вопрос не попадает в новый заход."""
+    with TestClient(app) as client:
+        client.post("/login", data=TEACHER, follow_redirects=False)
+        qid = by_test("treat_ash").question_ids[0]
+        client.post(f"/api/quiz-edit/{qid}", json={"text": "", "reference": "", "keys": "",
+                                                  "explain": "", "hidden": True})
+        assert client.get("/api/quiz-edit/questions").status_code == 200
+        client.delete(f"/api/quiz-edit/{qid}")
+
+        with _student_client() as student:
+            run = student.post("/api/video-quiz/start",
+                               json={"test": "treat_ash", "mode": "training", "lang": "ru"}).json()
+            assert run["total"] >= 1
+
+
+def test_only_teacher_can_edit_questions():
+    with _student_client() as client:
+        assert client.get("/api/quiz-edit/questions").status_code == 403
+        assert client.get("/teacher/video-quiz/edit", follow_redirects=False).status_code == 303

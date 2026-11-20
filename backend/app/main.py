@@ -12,7 +12,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from .config import FRONTEND_DIR, settings
 from .db import init_db
 from .deps import render
-from .routers import api, auth, pages, videoquiz, vision
+from .routers import api, auth, pages, quizedit, videoquiz, vision
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 
@@ -44,6 +44,7 @@ app.include_router(auth.router)
 app.include_router(api.router)
 app.include_router(vision.router)
 app.include_router(videoquiz.router)
+app.include_router(quizedit.router)
 app.include_router(pages.router)
 
 

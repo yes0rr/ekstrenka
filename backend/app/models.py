@@ -92,6 +92,26 @@ class VideoQuizRun(Base):
     user: Mapped["User"] = relationship()
 
 
+class QuizOverride(Base):
+    """Правка вопроса преподавателем: текст, эталон, ключевые слова.
+
+    Хранится отдельно от банка вопросов (quizbank.py), поэтому банк остаётся
+    источником «по умолчанию», а преподаватель может переопределить любой вопрос
+    и в любой момент вернуть исходный вариант.
+    """
+    __tablename__ = "quiz_overrides"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    question_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
+    text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reference: Mapped[str | None] = mapped_column(Text, nullable=True)
+    explain: Mapped[str | None] = mapped_column(Text, nullable=True)
+    keys: Mapped[str | None] = mapped_column(Text, nullable=True)   # JSON: список строк через |
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)  # убрать из тестов
+    author_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+
 class Log(Base):
     __tablename__ = "logs"
 

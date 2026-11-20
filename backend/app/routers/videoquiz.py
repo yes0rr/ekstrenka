@@ -37,7 +37,7 @@ from ..videoquiz import (
     section_tests,
     verdict,
 )
-from .. import speech
+from .. import quizedit, speech
 from ..answermatch import match
 
 router = APIRouter(prefix="/api/video-quiz", tags=["video-quiz"])
@@ -131,7 +131,13 @@ def start(payload: StartIn, db: Session = Depends(get_db),
     test = by_test(payload.test)
     if test is None:
         raise HTTPException(422, "Нет такого теста")
-    picked = pick_questions(test.key)
+    # вопросы теста с учётом правок преподавателя (скрытые не берём)
+    edited = {q.id: q for q in quizedit.apply_all(db)}
+    picked = [edited[qid] for qid in test.question_ids if qid in edited]
+    import random as _random
+    _random.shuffle(picked)
+    if not picked:
+        raise HTTPException(422, "В этом тесте нет доступных вопросов")
     run = VideoQuizRun(
         user_id=user.id,
         section=test.key,          # в этом поле теперь ключ теста
@@ -164,7 +170,7 @@ def answer(payload: AnswerIn, db: Session = Depends(get_db),
     run = _own_run(db, payload.run_id, user)
     if run.finished_at is not None:
         raise HTTPException(409, "Попытка уже завершена")
-    question = by_id(payload.question_id)
+    question = quizedit.get_question(db, payload.question_id) or by_id(payload.question_id)
     run_question_ids = [int(qid) for qid in (loads(run.question_ids, []) or [])]
     if question is None or question.id not in run_question_ids:
         raise HTTPException(404, "Такого вопроса нет в этой попытке")
