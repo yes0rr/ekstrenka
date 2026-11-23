@@ -184,6 +184,7 @@ tbody tr:hover { background: rgba(255,255,255,.02); }
 
 .media-box { position: relative; border-radius: var(--radius); overflow: hidden; background: #06090d; border: 1px solid var(--border); aspect-ratio: 4/3; display: grid; place-items: center; }
 .media-box video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.media-box video.is-rear { transform: none; }
 .media-placeholder { color: var(--muted); font-size: 13px; text-align: center; padding: 16px; }
 .rec-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--danger); animation: pulse 1.2s infinite; }
 @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
@@ -755,3 +756,35 @@ html[data-theme="light"][data-accent="graphite"] { --accent: #4b5566; --accent-2
 .quiz-edit-result.is-correct { color: #2fbf71; }
 .quiz-edit-result.is-partial { color: #d8a72a; }
 .quiz-edit-result.is-wrong { color: #e05a5a; }
+
+/* ----------------------------- лендинг ----------------------------- */
+.landing-nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0 4px; flex-wrap: wrap; }
+.landing-brand { font-size: 20px; font-weight: 700; color: var(--text); text-decoration: none; }
+.landing-brand .dot { color: var(--accent); }
+.landing-hero { padding: 64px 0 48px; text-align: center; }
+.landing-eyebrow {
+  display: inline-block; padding: 5px 12px; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--muted); font-size: 12px; letter-spacing: .02em;
+}
+.landing-hero h1 { font-size: clamp(30px, 5vw, 52px); line-height: 1.12; margin: 18px 0 16px; }
+.landing-hero .btn { padding: 11px 20px; }
+.landing-lead { max-width: 720px; margin: 0 auto 26px; color: var(--muted); font-size: 17px; line-height: 1.65; }
+.landing-section { padding: 32px 0; }
+.landing-section h2 { font-size: clamp(23px, 3vw, 32px); margin: 0 0 20px; }
+.landing-step {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(79, 140, 255, .14); color: var(--accent); font-weight: 700; margin-bottom: 4px;
+}
+.landing-note { border-left: 3px solid var(--accent); }
+.landing-footer {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  border-top: 1px solid var(--border); margin-top: 40px; padding: 22px 0 40px; color: var(--muted);
+}
+.landing-footer a { text-decoration: none; }
+.landing-footer a:hover { color: var(--accent); }
+
+@media (max-width: 640px) {
+  .landing-hero { padding: 40px 0 28px; }
+  .landing-lead { font-size: 15px; }
+  .landing-nav { padding-top: 10px; }
+}

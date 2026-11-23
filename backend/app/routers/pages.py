@@ -20,6 +20,13 @@ def _guard(user: User | None) -> RedirectResponse | None:
     return None
 
 
+# ----------------------------- лендинг -----------------------------
+@router.get("/landing")
+def landing(request: Request, user: User | None = Depends(get_current_user)):
+    """Публичная страница с описанием продукта — доступна без входа."""
+    return render(request, "landing.html", user)
+
+
 # ----------------------------- главная -----------------------------
 @router.get("/")
 def index(request: Request, db: Session = Depends(get_db), user: User | None = Depends(get_current_user)):

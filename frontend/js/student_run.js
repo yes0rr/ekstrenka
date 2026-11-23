@@ -215,11 +215,65 @@ function showMediaProblem(text) {
   if (status) status.textContent = 'нет доступа';
 }
 
+/* Задняя камера: на телефоне она смотрит на манекен и руки, а не на лицо.
+   `ideal` вместо `exact` — если задней камеры нет (ноутбук, один объектив),
+   браузер отдаст единственную доступную, а не ошибку.
+   `facing` — какое направление просить: 'environment' (задняя) или 'user'. */
+async function openCameraStream(facing) {
+  const wanted = facing === 'user' ? 'user' : 'environment';
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: wanted } },
+      audio: false,
+    });
+  } catch (error) {
+    /* Часть старых Android/WebView не понимает facingMode и отвечает
+       OverconstrainedError. Тогда просим камеру по умолчанию. */
+    const name = (error && error.name) || '';
+    if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError' || name === 'TypeError') {
+      return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
+    throw error;
+  }
+}
+
+function stopStream(stream) {
+  if (!stream) return;
+  stream.getTracks().forEach((track) => track.stop());
+}
+
+async function listVideoInputs() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return [];
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices.filter((device) => device.kind === 'videoinput');
+  } catch (error) {
+    return [];
+  }
+}
+
+/* Кнопка «Сменить камеру» нужна только тогда, когда камер больше одной. */
+async function refreshCamSwitch() {
+  const button = document.getElementById('camSwitchBtn');
+  if (!button) return;
+  const inputs = await listVideoInputs();
+  button.classList.toggle('hidden', !cameraOn || inputs.length < 2);
+}
+
+/* Заднюю камеру не зеркалим: иначе руки и текст в кадре отражены. */
+function isRearCamera(stream) {
+  const track = stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
+  if (!track) return false;
+  const settings = track.getSettings ? track.getSettings() : {};
+  if (settings.facingMode) return settings.facingMode === 'environment';
+  return /back|rear|environment|задн/i.test(track.label || '');
+}
+
 async function toggleCamera() {
   const button = document.getElementById('camBtn');
 
   if (cameraOn) {
-    if (camStream) camStream.getTracks().forEach((track) => track.stop());
+    stopStream(camStream);
     camStream = null;
     cameraOn = false;
     document.getElementById('cam').classList.add('hidden');
@@ -228,6 +282,7 @@ async function toggleCamera() {
     placeholder.textContent = 'Камера выключена';
     if (button) button.textContent = 'Включить камеру';
     updateMediaMeta();
+    refreshCamSwitch();
     if (window.CprStream) window.CprStream.stop();
     return;
   }
@@ -240,14 +295,16 @@ async function toggleCamera() {
   }
 
   try {
-    camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    camStream = await openCameraStream();
     const video = document.getElementById('cam');
     video.srcObject = camStream;
+    video.classList.toggle('is-rear', isRearCamera(camStream));
     video.classList.remove('hidden');
     document.getElementById('mediaPlaceholder').classList.add('hidden');
     cameraOn = true;
     if (button) button.textContent = 'Выключить камеру';
     updateMediaMeta();
+    refreshCamSwitch();
     // кадры на сервер для анализа техники (если на сервере включён VISION_ENABLED)
     maybeStartAnalysis();
   } catch (error) {
@@ -262,6 +319,78 @@ async function toggleCamera() {
     }
     showMediaProblem(text);
     if (button) button.textContent = 'Включить камеру';
+  }
+}
+
+/* Переключение камер: сначала просим противоположное направление
+   (задняя ↔ фронтальная), а если браузер вернул ту же камеру — берём
+   следующую из списка устройств. Старый поток останавливаем только после
+   того, как новый получен, чтобы анализ техники не видел пустой кадр. */
+async function switchCamera() {
+  if (!cameraOn || !camStream) return;
+  const button = document.getElementById('camSwitchBtn');
+  const camButton = document.getElementById('camBtn');
+  const previous = camStream;
+  const wasRear = isRearCamera(previous);
+  const target = wasRear ? 'user' : 'environment';
+  if (button) button.disabled = true;
+  if (camButton) camButton.disabled = true;
+
+  try {
+    let next;
+    try {
+      next = await openCameraStream(target);
+    } catch (error) {
+      const name = (error && error.name) || '';
+      if (name !== 'NotReadableError' && name !== 'AbortError' && name !== 'TrackStartError') throw error;
+      /* некоторые телефоны не отдают вторую камеру, пока занята первая */
+      stopStream(previous);
+      next = await openCameraStream(target);
+    }
+
+    if (isRearCamera(next) === wasRear) {
+      /* направление не изменилось — перебираем устройства по deviceId */
+      const inputs = await listVideoInputs();
+      const currentId = (previous.getVideoTracks()[0].getSettings() || {}).deviceId;
+      const index = inputs.findIndex((device) => device.deviceId === currentId);
+      const candidate = inputs.length > 1 ? inputs[(index + 1) % inputs.length] : null;
+      if (candidate && candidate.deviceId && candidate.deviceId !== currentId) {
+        stopStream(next);
+        next = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: candidate.deviceId } },
+          audio: false,
+        });
+      }
+    }
+
+    stopStream(previous);
+    camStream = next;
+    const video = document.getElementById('cam');
+    video.srcObject = camStream;
+    video.classList.toggle('is-rear', isRearCamera(camStream));
+    video.classList.remove('hidden');
+    document.getElementById('mediaPlaceholder').classList.add('hidden');
+    updateMediaMeta();
+  } catch (error) {
+    /* не получилось — возвращаем прежнюю камеру */
+    try {
+      stopStream(camStream);
+      camStream = await openCameraStream(wasRear ? 'environment' : 'user');
+      const video = document.getElementById('cam');
+      video.srcObject = camStream;
+      video.classList.toggle('is-rear', isRearCamera(camStream));
+      video.classList.remove('hidden');
+      document.getElementById('mediaPlaceholder').classList.add('hidden');
+    } catch (fallbackError) {
+      camStream = null;
+      cameraOn = false;
+      document.getElementById('cam').classList.add('hidden');
+      showMediaProblem('Не удалось переключить камеру: ' + (error && error.message ? error.message : 'неизвестная ошибка'));
+    }
+  } finally {
+    if (button) button.disabled = false;
+    if (camButton) camButton.disabled = false;
+    refreshCamSwitch();
   }
 }
 

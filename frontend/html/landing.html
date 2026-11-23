@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Экстренка — обучение практическим навыкам{% endblock %}
+{% block content %}
+
+{% if not user %}
+<nav class="landing-nav">
+  <a class="landing-brand" href="/landing">Экстренка<span class="dot">.</span></a>
+  <div class="btn-row">
+    <a class="btn ghost" href="/login">Войти</a>
+    <a class="btn" href="/register">Создать аккаунт</a>
+  </div>
+</nav>
+{% endif %}
+
+<section class="landing-hero">
+  <span class="landing-eyebrow">Учебная платформа для скорой медицинской помощи</span>
+  <h1>Экстренка — тренируйтесь до автоматизма</h1>
+  <p class="landing-lead">
+    Практические испытания и видеотест по станции экстренной медицинской помощи.
+    Преподаватель готовит задания, студент проходит их на телефоне или компьютере
+    и сразу видит результат.
+  </p>
+  <div class="btn-row" style="justify-content:center">
+    <a class="btn" href="/login">Войти в аккаунт</a>
+    <a class="btn ghost" href="#how">Как это работает</a>
+  </div>
+</section>
+
+<section class="landing-section">
+  <h2>Что внутри</h2>
+  <div class="grid cards">
+    <div class="card">
+      <div class="title">Испытания и вопросы</div>
+      <p class="small muted">
+        Преподаватель собирает тест из вопросов, выбирает режим обучения или проверки
+        и публикует его. Студент видит только задание, а не правильные ответы.
+      </p>
+    </div>
+    <div class="card">
+      <div class="title">Видеотест по станции ЭМП</div>
+      <p class="small muted">
+        Вопросы по диагностике и лечению, ответ своими словами. В режиме обучения
+        разбор показывается сразу после ответа.
+      </p>
+    </div>
+    <div class="card">
+      <div class="title">Камера на телефоне</div>
+      <p class="small muted">
+        По умолчанию включается задняя камера — она смотрит на манекен и руки.
+        Кнопка «Сменить камеру» переключает на переднюю, когда нужно показать лицо.
+      </p>
+    </div>
+    <div class="card">
+      <div class="title">Результаты и разбор</div>
+      <p class="small muted">
+        Баллы считаются автоматически. Преподаватель видит каждую попытку, может
+        оценить открытый ответ вручную и оставить комментарий.
+      </p>
+    </div>
+    <div class="card">
+      <div class="title">Удобно с телефона</div>
+      <p class="small muted">
+        Интерфейс подстраивается под экран: меню и кнопки удобны для пальца,
+        а рабочее место с камерой помещается на одном экране.
+      </p>
+    </div>
+    <div class="card">
+      <div class="title">Русский и английский</div>
+      <p class="small muted">
+        Язык интерфейса переключается в правом нижнем углу — можно заниматься
+        на русском или английском.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="landing-section" id="how">
+  <h2>Как это работает</h2>
+  <div class="grid cards">
+    <div class="card">
+      <div class="landing-step">1</div>
+      <div class="title">Преподаватель готовит задание</div>
+      <p class="small muted">
+        Создаёт испытание, добавляет вопросы и нажимает «Опубликовать».
+        До публикации студент его не видит.
+      </p>
+    </div>
+    <div class="card">
+      <div class="landing-step">2</div>
+      <div class="title">Студент проходит</div>
+      <p class="small muted">
+        Открывает тест, отвечает на вопросы, при необходимости включает камеру
+        и микрофон, затем завершает попытку.
+      </p>
+    </div>
+    <div class="card">
+      <div class="landing-step">3</div>
+      <div class="title">Оба видят результат</div>
+      <p class="small muted">
+        Студент получает балл и разбор ошибок. Преподаватель видит попытку
+        в результатах и может выставить оценку за открытый ответ.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="landing-section">
+  <h2>Для кого</h2>
+  <div class="grid cards">
+    <div class="card">
+      <div class="title">Студентам</div>
+      <p class="small muted">
+        Отрабатывать алгоритмы до экзамена, проверять себя в режиме обучения
+        и возвращаться к своим попыткам в любой момент.
+      </p>
+    </div>
+    <div class="card">
+      <div class="title">Преподавателям</div>
+      <p class="small muted">
+        Давать задания, вести банк вопросов видеотеста, смотреть результаты
+        группы и историю действий в журнале.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section class="landing-section">
+  <div class="panel landing-note">
+    <h3 style="margin-top:0">Про видео и данные</h3>
+    <p class="muted" style="margin:0">
+      Видео не записывается и не хранится. Если включён анализ техники, на сервер
+      уходят только числа: темп, глубина и положение рук. Доступ к заданиям
+      и результатам разделён по ролям: студент видит своё, преподаватель — задания
+      и попытки своих студентов.
+    </p>
+  </div>
+</section>
+
+<footer class="landing-footer">
+  <span>Экстренка · учебная платформа</span>
+  <span class="btn-row">
+    <a class="muted small" href="/login">Войти</a>
+    <a class="muted small" href="/register">Регистрация</a>
+  </span>
+</footer>
+
+{% endblock %}
