@@ -349,24 +349,43 @@ def match(question, answer: str) -> dict:
     # Балл = доля закрытых критериев: 5 из 5 — верно, 3 из 5 — половина, 1 из 5 — мало.
     criteria = tuple(getattr(question, "criteria", ()) or ())
     if criteria:
+        # критерии из файла преподавателя бывают двух видов:
+        #   у критерия свои данные (список препаратов в столбце «правильные данные»);
+        #   у критерия данных нет — значит, оценивается столбец выше
+        #   (например, «приоритетность» — препараты жёлтого столбца).
+        by_criterion = [[] for _ in criteria]
+        pending = []
+        for index, (_name, _data, groups_c) in enumerate(criteria):
+            flat = list(_flat_groups(groups_c))
+            if flat:
+                by_criterion[index].extend(flat)
+                pending = flat
+            elif index > 0:
+                by_criterion[index - 1].extend(pending)
+        if not any(by_criterion):                 # страховка: раскладываем как есть
+            by_criterion = [list(_flat_groups(c[2])) for c in criteria]
+
         detail = []
-        for name, data, groups_c in criteria:
-            scores_c = [_group_hit(g, haystack, haystack_text) for g in _flat_groups(groups_c)]
-            part = sum(scores_c) / len(scores_c) if scores_c else 0.0
-            hit_groups = [g for g, sc in zip(_flat_groups(groups_c), scores_c) if sc >= 0.5]
+        for (name, data, _groups), flat in zip(criteria, by_criterion):
+            if not flat:
+                detail.append({"criterion": name, "marks": data, "done": False,
+                               "part": 0.0, "hit": [], "of": 0})
+                continue
+            scores_c = [_group_hit(g, haystack, haystack_text) for g in flat]
+            part = sum(scores_c) / len(scores_c)
             detail.append({"criterion": name, "marks": data,
                            "done": part >= 0.999, "part": round(part, 2),
-                           "hit": hit_groups})
+                           "hit": [g for g, sc in zip(flat, scores_c) if sc >= 0.5],
+                           "of": len(flat)})
         closed = sum(1 for d in detail if d["done"])
         share = round(sum(d["part"] for d in detail) / len(detail), 3)
         if share >= 0.999:
             verdict = "correct"
-        elif share >= 0.6:
-            verdict = "partial"
         elif share > 0.2:
             verdict = "partial"
         else:
             verdict = "wrong"
+
         return {
             "verdict": verdict,
             "coverage": share,
