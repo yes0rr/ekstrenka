@@ -805,3 +805,8 @@ html[data-theme="light"][data-accent="graphite"] { --accent: #4b5566; --accent-2
   font-size: 12.5px;
   color: #7fd18b;
 }
+
+/* неверные дозы в разборе ответа */
+.quiz-doses { margin-top: 10px; font-size: 12.5px; }
+.quiz-doses-head { font-weight: 600; color: #f2867b; margin-bottom: 4px; }
+.quiz-dose-row { color: var(--muted, #8b93a7); padding-left: 16px; }

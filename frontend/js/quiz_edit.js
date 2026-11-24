@@ -146,10 +146,29 @@
       if (!answer) return;
       var url = '/api/quiz-edit/check/' + item.id + '?answer=' + encodeURIComponent(answer);
       api(url).then(function (r) {
+        /* вопрос с критериями чек-листа: показываем, сколько пунктов закрыто */
+        if (r.criteria && r.criteria.length) {
+          var closed = r.criteria.filter(function (c) { return c.done; }).length;
+          var rows = r.criteria.map(function (c) {
+            return (c.done ? '✓ ' : (c.part > 0 ? '± ' : '— ')) + c.criterion;
+          });
+          var head = (VERDICT[r.verdict] || r.verdict) + ' · критериев ' + closed + ' / ' + r.criteria.length;
+          if (r.doses && r.doses.length) {
+            head += ' · дозы неверны: ' + r.doses.map(function (d) {
+              return (d.said ? d.said + ' вместо ' : 'не названо: ') + d.expected;
+            }).join('; ');
+          }
+          sandboxOut.textContent = head + ' · ' + rows.join(' · ');
+          sandboxOut.className = 'quiz-edit-result small is-' + r.verdict;
+          return;
+        }
         var text = (VERDICT[r.verdict] || r.verdict) +
           ' · покрытие ' + Math.round((r.coverage || 0) * 100) + ' %';
         if (r.matched && r.matched.length) text += ' · распознано: ' + r.matched.join(', ');
         if (r.missed && r.missed.length) text += ' · не хватило: ' + r.missed.join(', ');
+        if (r.doses && r.doses.length) text += ' · дозы неверны: ' + r.doses.map(function (d) {
+          return (d.said ? d.said + ' вместо ' : 'не названо: ') + d.expected;
+        }).join('; ');
         if (r.blocked && r.blocked.length) text += ' · запрещено: ' + r.blocked.join(', ');
         sandboxOut.textContent = text;
         sandboxOut.className = 'quiz-edit-result small is-' + r.verdict;

@@ -341,6 +341,16 @@
           list.appendChild(row);
         });
         feedback.appendChild(list);
+        /* неверные дозы: «сказано 9999 мг — нужно 0,5 мг» */
+        if (result.doses && result.doses.length) {
+          const bad = el('div', 'quiz-doses');
+          bad.appendChild(el('div', 'quiz-doses-head', 'Дозы названы неверно:'));
+          result.doses.slice(0, 6).forEach(function (d) {
+            bad.appendChild(el('div', 'quiz-dose-row',
+              (d.said ? d.said + ' — ' : '') + 'нужно: ' + d.expected));
+          });
+          feedback.appendChild(bad);
+        }
       } else if (result.explain && result.explain !== result.reference) {
         feedback.appendChild(el('div', 'muted small', result.explain));
       }
