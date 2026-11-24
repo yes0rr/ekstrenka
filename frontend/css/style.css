@@ -788,3 +788,20 @@ html[data-theme="light"][data-accent="graphite"] { --accent: #4b5566; --accent-2
   .landing-lead { font-size: 15px; }
   .landing-nav { padding-top: 10px; }
 }
+
+/* критерии чек-листа в разборе ответа */
+.quiz-criteria { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.quiz-criteria-head { font-size: 12.5px; font-weight: 600; }
+.quiz-criterion { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 6px; font-size: 12.5px; }
+.quiz-criterion.is-done .quiz-criterion-mark { color: var(--ok, #2fbf71); }
+.quiz-criterion-mark { color: var(--muted, #8b93a7); }
+.quiz-criterion-name, .quiz-criterion-hit, .quiz-criterion-marks { grid-column: 2; min-width: 0; overflow-wrap: anywhere; }
+.quiz-criterion-marks { grid-column: 2; }
+
+.quiz-criterion.is-part .quiz-criterion-mark { color: #e2b93b; }
+.quiz-criterion-hit {
+  display: block;
+  margin: 2px 0;
+  font-size: 12.5px;
+  color: #7fd18b;
+}

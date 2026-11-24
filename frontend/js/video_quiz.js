@@ -324,7 +324,24 @@
       if (result.reference) {
         feedback.appendChild(el('div', 'quiz-reference', t('Эталон: ') + result.reference));
       }
-      if (result.explain && result.explain !== result.reference) {
+      // критерии чек-листа: преподаватель видит, какой пункт закрыт, а какой нет
+      if (result.criteria && result.criteria.length) {
+        const list = el('div', 'quiz-criteria');
+        const closed = result.criteria.filter(function (c) { return c.done; }).length;
+        list.appendChild(el('div', 'quiz-criteria-head',
+          t('Критерии чек-листа: ') + closed + ' / ' + result.criteria.length));
+        result.criteria.forEach(function (c) {
+          const row = el('div', 'quiz-criterion' + (c.done ? ' is-done' : (c.part > 0 ? ' is-part' : '')));
+          row.appendChild(el('span', 'quiz-criterion-mark', c.done ? '✓' : (c.part > 0 ? '±' : '—')));
+          row.appendChild(el('span', 'quiz-criterion-name', c.criterion));
+          /* что студент уже сказал по этому критерию, а что осталось */
+          const hit = (c.hit || []).map(function (g) { return Array.isArray(g) ? g[0] : g; });
+          if (hit.length) row.appendChild(el('span', 'quiz-criterion-hit', 'сказано: ' + hit.join(', ')));
+          if (c.marks) row.appendChild(el('span', 'quiz-criterion-marks muted small', c.marks));
+          list.appendChild(row);
+        });
+        feedback.appendChild(list);
+      } else if (result.explain && result.explain !== result.reference) {
         feedback.appendChild(el('div', 'muted small', result.explain));
       }
     } catch (error) {
