@@ -192,6 +192,9 @@ def answer(payload: AnswerIn, db: Session = Depends(get_db),
         "verdict": result["verdict"],
         "coverage": result["coverage"],
         "correct": result["verdict"] in ("correct", "partial"),
+        # по критериям чек-листа: что закрыто, что нет (для разбора после ответа)
+        "criteria": result.get("criteria", []),
+        "score": result.get("score"),
     }
     run.answers = dumps(answers)
     db.commit()
@@ -210,6 +213,8 @@ def answer(payload: AnswerIn, db: Session = Depends(get_db),
         "reference": question.reference[run.lang],
         "explain": question.explain[run.lang],
         "checklist": question.checklist,
+        "criteria": result.get("criteria", []),
+        "score": result.get("score"),
     }
 
 

@@ -258,6 +258,17 @@ def _route_hit(synonym: str, haystack_text: str) -> bool:
     return any(v in f" {haystack_text} " for v in variants)
 
 
+def _flat_groups(groups) -> tuple[tuple[str, ...], ...]:
+    """((a, b), (c, d)) → (a, b), (c, d); ((«в/м», «бедр»), ...) тоже раскрывается."""
+    out: list[tuple[str, ...]] = []
+    for group in groups or ():
+        if group and isinstance(group[0], tuple):
+            out.extend(tuple(str(x) for x in item) for item in group)
+        else:
+            out.append(tuple(str(x) for x in group))
+    return tuple(out)
+
+
 def _group_hit(group: tuple[str, ...], haystack: set[str], haystack_text: str) -> float:
     """Совпала ли группа-синоним: 1.0 — по слову, 0.5 — только по числу, 0 — нет.
 
@@ -332,6 +343,41 @@ def match(question, answer: str) -> dict:
     semantic = semantic_similarity(raw, getattr(question, "reference", {}).get("ru", ""))
     if semantic is not None:
         coverage = max(coverage, round(semantic * 0.95, 3))
+
+    # ---- вопросы преподавателя: один вопрос — один большой ответ, оценка по критериям ----
+    # Каждый критерий закрыт полностью (все его группы слов найдены) или частично.
+    # Балл = доля закрытых критериев: 5 из 5 — верно, 3 из 5 — половина, 1 из 5 — мало.
+    criteria = tuple(getattr(question, "criteria", ()) or ())
+    if criteria:
+        detail = []
+        for name, data, groups_c in criteria:
+            scores_c = [_group_hit(g, haystack, haystack_text) for g in _flat_groups(groups_c)]
+            part = sum(scores_c) / len(scores_c) if scores_c else 0.0
+            hit_groups = [g for g, sc in zip(_flat_groups(groups_c), scores_c) if sc >= 0.5]
+            detail.append({"criterion": name, "marks": data,
+                           "done": part >= 0.999, "part": round(part, 2),
+                           "hit": hit_groups})
+        closed = sum(1 for d in detail if d["done"])
+        share = round(sum(d["part"] for d in detail) / len(detail), 3)
+        if share >= 0.999:
+            verdict = "correct"
+        elif share >= 0.6:
+            verdict = "partial"
+        elif share > 0.2:
+            verdict = "partial"
+        else:
+            verdict = "wrong"
+        return {
+            "verdict": verdict,
+            "coverage": share,
+            "score": round(share, 3),          # прогресс по критериям: 0…1
+            "closed": closed,                  # сколько критериев закрыто полностью
+            "total": len(detail),
+            "criteria": detail,
+            "matched": [d["criterion"] for d in detail if d["done"]],
+            "missed": [d["criterion"] for d in detail if not d["done"]],
+            "reference": getattr(question, "reference", {}).get("ru", ""),
+        }
 
     # вопрос про дозы/объёмы: препараты без цифр — не полный ответ.
     # считаем только группы, где ВСЕ синонимы — числа/единицы («мг», «мл», «150», «300»),

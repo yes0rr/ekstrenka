@@ -52,11 +52,11 @@ def test_bank_has_two_sections_and_nine_scenarios():
                           and "_lesson" not in t.key]
         assert len(scenario_tests) == 9
         for test in scenario_tests:
-            # по вопросам преподавателя: 4 общих + столько, сколько есть у сценария
-            assert 2 <= len(test.question_ids) <= 6
+            # вопросов в тесте — от 1 (большой вопрос с критериями) до 6
+            assert 1 <= len(test.question_ids) <= 6
         total_test = [t for t in tests if t.key.endswith("_all")][0]
         assert len(total_test.question_ids) == sum(1 for q in QUESTIONS if q.section == section.key)
-    assert TOTAL == len(QUESTIONS) == 77
+    assert TOTAL == len(QUESTIONS) == 73
     assert len(TESTS) == 24
 
 
@@ -378,21 +378,25 @@ def test_tests_follow_expert_lessons():
 
 
 def test_treatment_requires_doses():
-    """Вопрос про дозы: препараты без цифр — «принято частично», а не «верно»."""
-    question = [q for q in QUESTIONS if q.test == "treat_ash" and "доз" in q.text["ru"]][0]
+    """Большой вопрос АШ: без дозировок часть критериев не закрыта."""
+    question = [q for q in QUESTIONS if q.test == "treat_ash"][0]
     without = match(question, "эпинефрин, физраствор, гидрокортизон, сальбутамол")
     with_doses = match(question, question.reference["ru"])
     assert without["verdict"] in ("partial", "wrong")
     assert with_doses["verdict"] == "correct"
+    assert with_doses["score"] == 1.0
 
 
 def test_route_words_are_understood():
-    """«в мышцу бедра» = в/м, «в вену» = в/в."""
-    question = [q for q in QUESTIONS if q.test == "treat_ash" and "пут" in q.text["ru"]][0]
+    """«в мышцу бедра» = в/м, «в вену» = в/в (в большом вопросе АШ)."""
+    question = [q for q in QUESTIONS if q.test == "treat_ash"][0]
     assert match(question, question.reference["ru"])["verdict"] == "correct"
     spoken = ("эпинефрин в мышцу бедра, физраствор в вену струйно, гидрокортизон в вену, "
               "сальбутамол через небулайзер")
-    assert match(question, spoken)["verdict"] == "correct"
+    # все пути введения поняты; без дозировок — «принято частично», как и должно быть
+    assert match(question, spoken)["verdict"] == "partial"
+    routes = [c for c in match(question, spoken)["criteria"] if "способ" in c["criterion"]][0]
+    assert routes["done"] is True
 
 
 def test_refusal_is_wrong_for_treatment():
@@ -453,3 +457,18 @@ def test_only_teacher_can_edit_questions():
     with _student_client() as client:
         assert client.get("/api/quiz-edit/questions").status_code == 403
         assert client.get("/teacher/video-quiz/edit", follow_redirects=False).status_code == 303
+
+
+def test_criteria_question_gives_partial_credit():
+    """Один вопрос — много критериев: балл растёт по мере закрытия пунктов чек-листа."""
+    question = [q for q in QUESTIONS if q.test == "treat_ash"][0]
+    assert len(question.criteria) == 5
+    full = match(question, question.reference["ru"])
+    half = match(question, "эпинефрин 0,5 мг в/м в бедро, гидрокортизон 200 мг в/в")
+    none = match(question, "не знаю")
+    assert full["verdict"] == "correct" and full["score"] == 1.0
+    assert half["verdict"] == "partial" and 0 < half["score"] < 1
+    assert none["verdict"] == "wrong"
+    assert half["total"] == 5
+    # половина критериев закрыта хотя бы частично
+    assert sum(1 for c in half["criteria"] if c["part"] > 0) >= 3
