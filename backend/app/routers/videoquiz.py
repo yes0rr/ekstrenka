@@ -195,6 +195,7 @@ def answer(payload: AnswerIn, db: Session = Depends(get_db),
         # по критериям чек-листа: что закрыто, что нет (для разбора после ответа)
         "criteria": result.get("criteria", []),
         "score": result.get("score"),
+        "doses": result.get("doses", []),
     }
     run.answers = dumps(answers)
     db.commit()
@@ -215,6 +216,7 @@ def answer(payload: AnswerIn, db: Session = Depends(get_db),
         "checklist": question.checklist,
         "criteria": result.get("criteria", []),
         "score": result.get("score"),
+        "doses": result.get("doses", []),
     }
 
 
@@ -272,6 +274,7 @@ def voice(payload: VoiceIn, db: Session = Depends(get_db),
         "transcript": payload.transcript,
         "recognised": preview["verdict"] != "retry",
         "matched": preview["matched"][:5],
+        "doses": preview.get("doses", []),
         "mode": run.mode,
     }
 

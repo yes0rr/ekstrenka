@@ -472,3 +472,33 @@ def test_criteria_question_gives_partial_credit():
     assert half["total"] == 5
     # половина критериев закрыта хотя бы частично
     assert sum(1 for c in half["criteria"] if c["part"] > 0) >= 3
+
+
+def test_wrong_dose_is_not_correct():
+    """«9999 мг» и «1191 %» вместо 0,5 мг и 0,9 % — не верный ответ, а неверные дозы."""
+    question = [q for q in QUESTIONS if q.test == "treat_ash"][0]
+    answer = ("Эпинефрин 9999 мг в/м в переднебоковую поверхность верхней трети бедра без разведения. "
+              "Инфузия 1191 % раствора NaCl 1000 мл в/в струйно. Гидрокортизон 200 мг в/в струйно, "
+              "разведённый до 20 мл 0,9% раствора NaCl.")
+    result = match(question, answer)
+    assert result["verdict"] != "correct"
+    assert result["score"] < 1.0
+    # в разборе видно, что именно сказано неверно
+    assert any("9999" in item["said"] for item in result["doses"])
+    dose_row = [c for c in result["criteria"] if "дозиров" in c["criterion"]][0]
+    assert dose_row["done"] is False
+
+
+def test_right_dose_inside_range_is_accepted():
+    """«1500 мл» — внутри эталонных 1000–2000 мл, это верный ответ; «0,5 г» вместо «0,5 мг» — нет."""
+    question = [q for q in QUESTIONS if q.test == "treat_ash"][0]
+    good = match(question,
+                 "эпинефрин 0,5 мг в/м в бедро, NaCl 0,9% 1500 мл в/в струйно, гидрокортизон 200 мг в/в, "
+                 "сальбутамол 2,5 мг через небулайзер, сначала эпинефрин, потом соль, потом гидрокортизон, "
+                 "потом сальбутамол")
+    wrong_unit = match(question,
+                       "эпинефрин 0,5 г в/м в бедро, NaCl 0,9% 1500 мл в/в, гидрокортизон 200 мг в/в, "
+                       "сальбутамол 2,5 мг через небулайзер")
+    assert good["verdict"] == "correct", good["criteria"]
+    assert wrong_unit["verdict"] != "correct"
+    assert any("0,5 г" in item["said"] or "200 мг" in item["said"] for item in wrong_unit["doses"])

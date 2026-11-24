@@ -258,6 +258,157 @@ def _route_hit(synonym: str, haystack_text: str) -> bool:
     return any(v in f" {haystack_text} " for v in variants)
 
 
+# ---------------------------- проверка доз и объёмов ----------------------------
+# Преподаватель ставит дозу как есть: «0,5 мг», «1000–2000 мл», «40–80 мг», «70–100 Ед/кг».
+# Нам нужно понять не «есть ли цифра», а «верное ли число и в тех ли единицах».
+_VALUE_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*(?:[-–—]\s*(\d+(?:[.,]\d+)?))?\s*([а-яa-z%]*)",
+                       re.IGNORECASE)
+_UNIT_ALIASES = {
+    "мг": "мг", "миллиграмм": "мг", "миллиграмма": "мг", "миллиграммов": "мг",
+    "мкг": "мкг", "микрограмм": "мкг", "микрограмма": "мкг",
+    "г": "г", "грамм": "г", "грамма": "г", "граммов": "г",
+    "мл": "мл", "миллилитр": "мл", "миллилитра": "мл", "миллилитров": "мл",
+    "л": "л", "литр": "л", "литра": "л",
+    "ед": "ед", "единиц": "ед", "единицы": "ед", "единица": "ед",
+    "%": "%",
+    "кг": "кг", "килограмм": "кг",
+    "мм": "мм",
+}
+# допуск: дозу можно назвать чуть иначе, но не «9999 мг»
+_TOLERANCE = {"мг": 0.1, "мкг": 0.1, "г": 0.1, "мл": 0.1, "л": 0.1, "ед": 0.1, "кг": 0.1, "%": 1.0, "": 0.1}
+
+
+def _to_float(text: str) -> float | None:
+    try:
+        return float(str(text).replace(",", "."))
+    except (TypeError, ValueError):
+        return None
+
+
+def _unit_of(word: str) -> str:
+    word = (word or "").strip().lower().replace(".", "").replace("/", "")
+    if not word:
+        return ""
+    if word in _UNIT_ALIASES:
+        return _UNIT_ALIASES[word]
+    for ending in ("ами", "ах", "ов", "а", "ы", "и"):
+        if word.endswith(ending) and word[: -len(ending)] in _UNIT_ALIASES:
+            return _UNIT_ALIASES[word[: -len(ending)]]
+    # «мг/кг», «ед/кг», «мг/мл» — единица на массу: берём первую часть
+    head = word.split("/")[0]
+    return _UNIT_ALIASES.get(head, "")
+
+
+def parse_values(text: str) -> list[tuple[float | None, float | None, str, str]]:
+    """«эпинефрин 0,5 мг; 1000–2000 мл» → [(0.5, None, 'мг', 'эпинефрин'), (1000, 2000, 'мл', '')].
+
+    Последний элемент — слово перед числом: по нему видно, к какому препарату
+    относится доза. Работаем по «сырому» тексту, потому что токенизатор вставляет
+    между числом и единицей слова-числительные («0,5» → «ноль», «пять»).
+    """
+    raw = (text or "").lower().replace("ё", "е")
+    out: list[tuple[float | None, float | None, str, str]] = []
+    for found in _VALUE_RE.finditer(raw):
+        low = _to_float(found.group(1))
+        high = _to_float(found.group(2)) if found.group(2) else None
+        unit = _unit_of(found.group(3) or "")
+        if not unit:                       # «1000 мг» / «1000 (мл)» — единица следующим словом
+            rest = raw[found.end(): found.end() + 12].strip(" )(,.;")
+            word = re.split(r"[\s,;)(]+", rest, maxsplit=1)[0] if rest else ""
+            unit = _unit_of(word)
+        anchor = ""
+        before = re.findall(r"[а-яa-z0-9]+", raw[: found.start()])
+        for word in reversed(before[-4:]):
+            if word[0].isdigit() or _unit_of(word):
+                continue
+            anchor = word
+            break
+        out.append((low, high, unit, anchor))
+    return out
+
+
+def _value_ok(expected: tuple[float | None, float | None, str], found) -> bool:
+    """Подходит ли найденное число под ожидаемую дозу: те же единицы, значение в допуске."""
+    low, high, unit = expected
+    if low is None:
+        return False
+    found_low, found_high, found_unit, _anchor = found
+    tolerance = _TOLERANCE.get(unit, 0.1)
+    top = high if high is not None else low
+    bottom = low
+    # единицы должны совпадать: «9999 мг» не закроет «1000–2000 мл»,
+    # «0,5 мг» не закроет «0,5 %». Если единица не распознана — сравниваем только число.
+    if unit and found_unit and unit != found_unit:
+        return False
+    for value in (found_low, found_high):
+        if value is None:
+            continue
+        if unit == "%":            # «1191 %» не должно пройти как «0,9 %»
+            if abs(value - bottom) <= 0.05:
+                return True
+            continue
+        if bottom - tolerance <= value <= top + tolerance:
+            return True
+    return False
+
+
+def _expected_lines(text: str) -> list[str]:
+    """Данные критерия или эталон → строки требований: «эпинефрин ... ; инфузия ...»."""
+    parts = re.split(r"[;\n]", text or "")
+    return [part.strip(" .") for part in parts if parse_values(part)]
+
+
+def _dose_review(expected_text: str, answer_raw: str) -> tuple[bool, list[dict]]:
+    """Сверка чисел ответа с эталоном: верные ли дозы, объёмы и проценты.
+
+    Каждая строка эталона (препарат + его доза) — отдельное требование.
+    Строка закрыта, если в ответе есть хотя бы одно её число с теми же единицами
+    (для промежутка «1000–2000 мл» подходит любое значение внутри).
+    Возвращает «всё верно» и ошибки вида {said: «9999 мг», expected: «эпинефрин ... 0,5 мг»}.
+    """
+    found = parse_values(answer_raw)
+    if not found:
+        return True, []                     # чисел нет — оценивать дозы не по чему
+    ok_all = True
+    mistakes: list[dict] = []
+    for line in _expected_lines(expected_text):
+        expected = [(low, high, unit) for low, high, unit, _anchor in parse_values(line) if low is not None]
+        if not expected:
+            continue
+        if any(_value_ok(exp, item) for exp in expected for item in found):
+            continue
+        ok_all = False
+        units = {exp[2] for exp in expected if exp[2]}
+        said = next((item for item in found if item[2] in units), None)
+        mistakes.append({"said": _format_value(said) if said else "",
+                         "expected": line[:120]})
+    return ok_all, mistakes
+
+
+def _format_value(value) -> str:
+    """(1000.0, 2000.0, 'мл', ...) → «1000–2000 мл»."""
+    low, high, unit = value[0], value[1], value[2]
+    if low is None:
+        return ""
+    def num(x: float) -> str:
+        return str(int(x)) if float(x).is_integer() else str(round(x, 2)).replace(".", ",")
+    text = num(low) if high is None else f"{num(low)}–{num(high)}"
+    return f"{text} {unit}".strip()
+
+
+def _dose_groups(groups) -> list[tuple[str, ...]]:
+    """Группы, где перечислены только дозы/единицы («0,5», «1000», «2000», «мл»)."""
+    out = []
+    for group in groups or ():
+        if not group:
+            continue
+        if any(_is_dose(synonym) for synonym in group) and all(
+                _is_dose(synonym) or _unit_of(synonym) or synonym.strip().lower() in _UNITS
+                for synonym in group):
+            out.append(tuple(group))
+    return out
+
+
 def _flat_groups(groups) -> tuple[tuple[str, ...], ...]:
     """((a, b), (c, d)) → (a, b), (c, d); ((«в/м», «бедр»), ...) тоже раскрывается."""
     out: list[tuple[str, ...]] = []
@@ -269,12 +420,21 @@ def _flat_groups(groups) -> tuple[tuple[str, ...], ...]:
     return tuple(out)
 
 
-def _group_hit(group: tuple[str, ...], haystack: set[str], haystack_text: str) -> float:
+def _group_hit(group: tuple[str, ...], haystack: set[str], haystack_text: str,
+               raw_text: str | None = None) -> float:
     """Совпала ли группа-синоним: 1.0 — по слову, 0.5 — только по числу, 0 — нет.
 
     Число без слова («80» в ответе про давление) — слабое доказательство смысла,
     поэтому одна цифра сама по себе группу не закрывает.
     """
+    # дозная группа («0,5 мг», «1000–2000 мл»): мало найти цифру — она должна быть верной
+    expected = [(low, high, unit) for low, high, unit, _anchor in parse_values(" ".join(group))
+                if low is not None]
+    if expected and all(_is_dose(synonym) or _unit_of(synonym) or synonym.strip().lower() in _UNITS
+                        for synonym in group):
+        found = parse_values(raw_text or haystack_text)
+        return 1.0 if any(_value_ok(exp, item) for exp in expected for item in found) else 0.0
+
     best = 0.0
     for synonym in group:
         if _route_hit(synonym, haystack_text):      # в/м, в/в, п/к
@@ -319,7 +479,7 @@ def match(question, answer: str) -> dict:
     scores: list[float] = []
     content_hit = False
     for group in groups:
-        score = _group_hit(group, haystack, haystack_text)
+        score = _group_hit(group, haystack, haystack_text, raw)
         scores.append(score)
         group_score += score
         if score >= 1.0:
@@ -367,16 +527,49 @@ def match(question, answer: str) -> dict:
 
         detail = []
         for (name, data, _groups), flat in zip(criteria, by_criterion):
+            # критерий «про дозы» — тот, у которого ВСЕ ключевые группы — дозные
+            # («0,5», «1000», «2000», «мл», …). Тогда считаем по строкам данных,
+            # а не по ключевым словам: важно не «есть ли цифра», а верное ли число.
+            dose_only = bool(flat) and len(_dose_groups(flat)) == len(flat)
+            lines = _expected_lines(data) if (dose_only or not flat) else []
+            if lines:
+                # критерий про дозы: смотрим не «есть ли цифра», а «верное ли значение
+                # и в тех ли единицах». Каждая строка данных — отдельное требование.
+                found = parse_values(raw)
+                closed_lines, hit_values, mistakes, used = 0, [], [], set()
+                for line in lines:
+                    expected = [(low, high, unit) for low, high, unit, _a in parse_values(line)
+                                if low is not None]
+                    good = next((item for item in found
+                                 if any(_value_ok(exp, item) for exp in expected)), None)
+                    if good is not None:
+                        closed_lines += 1
+                        hit_values.append(_format_value(good))
+                        used.add(good)
+                        continue
+                    units = {exp[2] for exp in expected if exp[2]}
+                    # показываем, что учащийся сказал вместо нужной дозы (то же измерение),
+                    # но только если это число не засчитано другой строкой
+                    said = next((item for item in found
+                                 if item[2] in units and item not in used), None)
+                    mistakes.append({"said": _format_value(said) if said else "",
+                                     "expected": line[:120]})
+                part = closed_lines / len(lines)
+                detail.append({"criterion": name, "marks": data,
+                               "done": part >= 0.999, "part": round(part, 2),
+                               "hit": hit_values, "of": len(lines), "wrong": mistakes})
+                continue
+
             if not flat:
                 detail.append({"criterion": name, "marks": data, "done": False,
-                               "part": 0.0, "hit": [], "of": 0})
+                               "part": 0.0, "hit": [], "of": 0, "wrong": []})
                 continue
-            scores_c = [_group_hit(g, haystack, haystack_text) for g in flat]
+            scores_c = [_group_hit(g, haystack, haystack_text, raw) for g in flat]
             part = sum(scores_c) / len(scores_c)
             detail.append({"criterion": name, "marks": data,
                            "done": part >= 0.999, "part": round(part, 2),
-                           "hit": [g for g, sc in zip(flat, scores_c) if sc >= 0.5],
-                           "of": len(flat)})
+                           "hit": [g[0] for g, sc in zip(flat, scores_c) if sc >= 0.5],
+                           "of": len(flat), "wrong": []})
         closed = sum(1 for d in detail if d["done"])
         share = round(sum(d["part"] for d in detail) / len(detail), 3)
         if share >= 0.999:
@@ -393,6 +586,7 @@ def match(question, answer: str) -> dict:
             "closed": closed,                  # сколько критериев закрыто полностью
             "total": len(detail),
             "criteria": detail,
+            "doses": [m for d in detail for m in d.get("wrong", [])],
             "matched": [d["criterion"] for d in detail if d["done"]],
             "missed": [d["criterion"] for d in detail if not d["done"]],
             "reference": getattr(question, "reference", {}).get("ru", ""),
@@ -405,7 +599,8 @@ def match(question, answer: str) -> dict:
         return bool(group) and all(_is_dose(x) or x.strip().lower() in _UNITS for x in group)
 
     dose_groups = [g for g in groups if _is_dose_group(g)]
-    doses_named = any(_is_dose(w) for w in haystack)
+    doses_named = bool(dose_groups) and any(
+        _group_hit(g, haystack, haystack_text, raw) >= 1.0 for g in dose_groups)
 
     if len(haystack) <= 1 and not hit:
         verdict = "retry"
@@ -420,9 +615,14 @@ def match(question, answer: str) -> dict:
     else:
         verdict = "wrong"
 
+    # если в ответе названы дозы, но с неверными числами/единицами — «верно» не ставим
+    doses_ok, doses = _dose_review(getattr(question, "reference", {}).get("ru", ""), raw)
+    if not doses_ok and verdict == "correct":
+        verdict = "partial"
     return {
         "verdict": verdict,
         "coverage": round(coverage, 2),
+        "doses": doses,
         "matched": hit[:6],
         "missed": [] if verdict == "correct" else miss[:6],
         "reference": getattr(question, "reference", {}).get("ru", ""),

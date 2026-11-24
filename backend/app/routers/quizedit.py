@@ -86,4 +86,7 @@ def check_answer(question_id: int, answer: str = "", db: Session = Depends(get_d
     result = match(question, answer)
     return {"verdict": result["verdict"], "coverage": result["coverage"],
             "matched": result["matched"], "missed": result["missed"],
+            "criteria": result.get("criteria", []),
+            "score": result.get("score"),
+            "doses": result.get("doses", []),
             "blocked": result.get("blocked", [])}
